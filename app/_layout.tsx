@@ -10,19 +10,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(onboarding)" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="scanner" />
-        <Stack.Screen name="scan-loading" />
-        <Stack.Screen name="camera-permission" />
-        <Stack.Screen name="product/[barcode]" />
-        <Stack.Screen name="compare" />
-        <Stack.Screen name="premium" />
-        <Stack.Screen name="settings" />
-        <Stack.Screen name="not-found-product" />
-      </Stack>
+      <Stack screenOptions={{ headerShown: false }} />
       <StatusBar style="auto" />
     </ThemeProvider>
   );
