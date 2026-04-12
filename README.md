@@ -1,50 +1,135 @@
-# Welcome to your Expo app 👋
+# Rótula App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicativo mobile brasileiro para escanear código de barras e traduzir rótulos em decisões de compra claras, rápidas e confiáveis.
 
-## Get started
+## Visão geral
+Rótula ajuda usuários a avaliar alimentos, cosméticos, higiene e autocuidado por meio de:
+- nota geral (0-100)
+- classificação por cor
+- ingredientes críticos
+- alternativas melhores
+- histórico e favoritos
 
-1. Install dependencies
+## Proposta de valor
+**“Escaneie. Entenda. Escolha melhor.”**
 
-   ```bash
-   npm install
-   ```
+## Stack
+- Mobile: React Native + Expo + TypeScript
+- Navegação: Expo Router
+- Estado inicial: local + mocks (pronto para API)
+- Backend recomendado: NestJS + PostgreSQL + Prisma
+- Observabilidade recomendada: Sentry + logs estruturados
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+## Estrutura de pastas
 ```bash
-npm run reset-project
+app/
+  (onboarding)/
+  (auth)/
+  (tabs)/
+  product/[barcode].tsx
+  scanner.tsx
+  ...
+components/
+  screen-shell.tsx
+  ui/score-badge.tsx
+constants/
+  theme.ts
+src/
+  mocks/products.ts
+  services/product-service.ts
+  types/product.ts
+docs/
+  product-strategy.md
+  checklists.md
+  handoff.md
+  prompts.md
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Pré-requisitos
+- Node.js 20+
+- npm 10+
+- Expo CLI (opcional)
 
-## Learn more
+## Instalação local
+```bash
+npm install
+npm run start
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## Rodar app
+```bash
+npm run ios
+npm run android
+npm run web
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Backend (planejado)
+```bash
+# sugestão futura
+cd backend
+npm install
+npm run start:dev
+```
 
-## Join the community
+## Variáveis de ambiente (futuro)
+```bash
+EXPO_PUBLIC_API_URL=
+EXPO_PUBLIC_SENTRY_DSN=
+```
 
-Join our community of developers creating universal apps.
+## Scripts principais
+- `npm run start`
+- `npm run lint`
+- `npm run web`
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Convenções
+- TypeScript estrito
+- Componentes pequenos e reutilizáveis
+- Rotas por domínio/feature
+
+## Fluxo de desenvolvimento
+1. Criar branch por feature
+2. Implementar tela/serviço/teste
+3. Rodar lint
+4. Abrir PR
+
+## Estratégia de branches
+- `main`: estável
+- `develop`: integração
+- `feature/*`, `fix/*`
+
+## Qualidade de código
+- ESLint Expo
+- Convenção de componentes funcionais
+- Tokens de tema centralizados
+
+## Commit pattern
+- `feat:` novas funcionalidades
+- `fix:` correções
+- `docs:` documentação
+- `refactor:` melhoria estrutural
+
+## Build e publicação
+- EAS Build para Android/iOS
+- Pipeline sugerido: lint + typecheck + build
+
+## Observações de produção
+- Substituir mocks por API versionada `/v1`
+- Habilitar auth real com refresh token
+- Adicionar políticas LGPD e privacidade
+
+## Roadmap
+- MVP: scanner, score, alternativas
+- Fase 2: comparação e personalização
+- Fase 3: comunidade e gamificação
+
+## Próximos passos
+1. Integrar backend NestJS
+2. Implementar scanner real com câmera
+3. Conectar analytics e monetização
+
+## Licença
+Proprietária (ajustável para MIT caso open-source).
+
+## Contato
+Equipe de produto Rótula — documento estratégico em `docs/product-strategy.md`.
