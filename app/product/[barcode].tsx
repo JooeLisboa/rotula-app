@@ -40,6 +40,12 @@ export default function ProductResultScreen() {
         if (found) {
           trackEvent('product_loaded', { productId: found.id, barcode });
 
+          await userService.addScanHistory({
+            barcode,
+            productId: found.id,
+            productName: found.name,
+          });
+
           const favorites = await userService.getFavorites();
           if (mounted) {
             setIsFavorite(favorites.items.some((item) => item.id === found.id));
@@ -71,9 +77,9 @@ export default function ProductResultScreen() {
     setIsTogglingFavorite(true);
 
     try {
-      const favoriteState = await userService.toggleFavorite(product.id);
+      const favoriteState = await userService.toggleFavorite(product.id, product.barcode);
       setIsFavorite(favoriteState);
-      trackEvent('favorite_toggled', { productId: product.id, isFavorite: favoriteState });
+      trackEvent(favoriteState ? 'favorite_added' : 'favorite_removed', { productId: product.id });
     } catch (error) {
       captureError(error, { scope: 'screen.product.favorite', productId: product.id });
     } finally {

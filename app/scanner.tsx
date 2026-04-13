@@ -50,7 +50,7 @@ export default function ScannerScreen() {
       </View>
 
       <ThemedText style={styles.hint}>
-        Dica: para validar fluxo completo use os códigos dos mocks, como 7891000100103.
+        Dica: para validar fluxo completo, faça seed de produtos e use um barcode cadastrado no Firestore.
       </ThemedText>
     </ScreenShell>
   );
