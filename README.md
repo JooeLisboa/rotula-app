@@ -22,7 +22,12 @@ app/
   _layout.tsx
   index.tsx
   (onboarding)/
+    _layout.tsx
+    index.tsx
   (auth)/
+    _layout.tsx
+    login.tsx
+    register.tsx
   (tabs)/
   scanner.tsx
   product/[barcode].tsx
@@ -111,6 +116,10 @@ npm run lint
 npm run typecheck
 npm run check:routes
 ```
+Requer Android Studio + emulator ativo.
+
+## Quando usar `--tunnel`
+Use tunnel quando o QR Code não abre no celular por rede local (Wi-Fi corporativo, roteador isolando dispositivos, VPN etc.).
 
 ## Variáveis de ambiente
 Crie `.env` (ou defina no shell):
