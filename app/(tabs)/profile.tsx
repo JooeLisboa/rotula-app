@@ -4,11 +4,13 @@ import { userService } from '@/src/services/user/user-service';
 import type { UserProfile } from '@/src/types/user';
 import { Link, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ScreenShell } from '@/components/screen-shell';
 import { ThemedText } from '@/components/themed-text';
-import { Palette } from '@/constants/theme';
+import { ActionButton } from '@/components/ui/action-button';
+import { SectionCard } from '@/components/ui/section-card';
+import { spacing } from '@/constants/theme';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -34,34 +36,23 @@ export default function ProfileScreen() {
   }
 
   return (
-    <ScreenShell title="Perfil" subtitle="Preferências, assinatura e privacidade.">
-      <ThemedText>{profile?.name ?? session?.user.name}</ThemedText>
-      <ThemedText>{profile?.email ?? session?.user.email}</ThemedText>
+    <ScreenShell title="Perfil" subtitle="Suas preferências, assinatura e privacidade em um só lugar.">
+      <SectionCard title={profile?.name ?? session?.user.name ?? 'Usuário'} subtitle={profile?.email ?? session?.user.email}>
+        <View style={styles.links}>
+          <Link href="/premium" asChild>
+            <ThemedText type="link">Conhecer plano Premium</ThemedText>
+          </Link>
+          <Link href="/settings" asChild>
+            <ThemedText type="link">Configurações da conta</ThemedText>
+          </Link>
+        </View>
+      </SectionCard>
 
-      <Link href="/premium">
-        <ThemedText>Assinar plano Premium</ThemedText>
-      </Link>
-      <Link href="/settings">
-        <ThemedText>Configurações</ThemedText>
-      </Link>
-
-      <Pressable onPress={handleLogout} style={styles.button}>
-        <ThemedText style={styles.buttonText}>Sair da conta</ThemedText>
-      </Pressable>
+      <ActionButton label="Sair da conta" onPress={handleLogout} variant="ghost" />
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
-    marginTop: 12,
-    borderRadius: 12,
-    backgroundColor: Palette.secondary,
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
+  links: { gap: spacing.xs },
 });

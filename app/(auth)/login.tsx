@@ -2,11 +2,13 @@ import { useAuth } from '@/src/hooks/use-auth';
 import { captureError } from '@/src/lib/observability/monitoring';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 
 import { ScreenShell } from '@/components/screen-shell';
 import { ThemedText } from '@/components/themed-text';
-import { Palette } from '@/constants/theme';
+import { ActionButton } from '@/components/ui/action-button';
+import { ErrorState } from '@/components/ui/error-state';
+import { Palette, radius, spacing } from '@/constants/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -28,50 +30,43 @@ export default function LoginScreen() {
   }
 
   return (
-    <ScreenShell title="Entrar" subtitle="Use seu e-mail para acessar histórico e favoritos.">
-      <TextInput
-        placeholder="E-mail"
-        style={styles.input}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        placeholder="Senha"
-        style={styles.input}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
-      <Pressable style={[styles.button, isAuthenticating && styles.buttonDisabled]} onPress={handleLogin}>
-        <ThemedText style={styles.buttonLabel}>{isAuthenticating ? 'Entrando...' : 'Entrar'}</ThemedText>
-      </Pressable>
-      <Link href="/(auth)/register">
-        <ThemedText style={styles.link}>Criar conta</ThemedText>
+    <ScreenShell title="Entrar" subtitle="Acesse seus favoritos, histórico e recomendações personalizadas.">
+      <View style={styles.form}>
+        <TextInput
+          placeholder="E-mail"
+          style={styles.input}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+          accessibilityLabel="Campo de e-mail"
+        />
+        <TextInput
+          placeholder="Senha"
+          style={styles.input}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+          accessibilityLabel="Campo de senha"
+        />
+      </View>
+      {error ? <ErrorState title="Falha no login" description={error} /> : null}
+      <ActionButton label={isAuthenticating ? 'Entrando...' : 'Entrar'} onPress={handleLogin} disabled={isAuthenticating} />
+      <Link href="/(auth)/register" asChild>
+        <ThemedText type="link">Criar conta grátis</ThemedText>
       </Link>
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
+  form: { gap: spacing.sm },
   input: {
     borderWidth: 1,
     borderColor: Palette.border,
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: radius.md,
+    padding: spacing.md,
     backgroundColor: '#fff',
+    minHeight: 48,
   },
-  button: {
-    marginTop: 8,
-    backgroundColor: Palette.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  buttonDisabled: { opacity: 0.7 },
-  buttonLabel: { color: '#fff', fontWeight: '700' },
-  link: { color: Palette.secondary, marginTop: 8 },
-  error: { color: '#b00020' },
 });

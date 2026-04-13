@@ -1,30 +1,29 @@
 import { Link } from 'expo-router';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ScreenShell } from '@/components/screen-shell';
 import { ThemedText } from '@/components/themed-text';
-import { Palette } from '@/constants/theme';
+import { SectionCard } from '@/components/ui/section-card';
+import { spacing } from '@/constants/theme';
 
 export default function OnboardingScreen() {
   return (
-    <ScreenShell title="Rótula" subtitle="Escaneie, entenda e escolha melhor em segundos.">
-      <ThemedText>Analise alimentos, cosméticos, higiene e autocuidado com nota clara.</ThemedText>
+    <ScreenShell title="Rótula" subtitle="Seu app para analisar produtos com rapidez e confiança.">
+      <SectionCard title="Entenda em segundos" subtitle="Uma nota clara, alertas visíveis e alternativas melhores.">
+        <View style={styles.list}>
+          <ThemedText>• Score destacado de 0 a 100</ThemedText>
+          <ThemedText>• Alertas e pontos positivos separados</ThemedText>
+          <ThemedText>• Histórico e favoritos para comparar depois</ThemedText>
+        </View>
+      </SectionCard>
+
       <Link href="/(auth)/login" asChild>
-        <Pressable style={styles.button}>
-          <ThemedText style={styles.buttonLabel}>Começar</ThemedText>
-        </Pressable>
+        <ThemedText type="link">Começar agora</ThemedText>
       </Link>
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  button: {
-    marginTop: 12,
-    backgroundColor: Palette.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  buttonLabel: { color: '#fff', fontWeight: '600' },
+  list: { gap: spacing.xs },
 });

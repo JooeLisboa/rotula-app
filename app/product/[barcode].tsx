@@ -1,11 +1,17 @@
-import { Link, useLocalSearchParams } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ScreenShell } from '@/components/screen-shell';
-import { ScoreBadge } from '@/components/ui/score-badge';
 import { ThemedText } from '@/components/themed-text';
-import { Palette } from '@/constants/theme';
+import { ActionButton } from '@/components/ui/action-button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingState } from '@/components/ui/loading-state';
+import { ProductHeader } from '@/components/ui/product-header';
+import { ProductInsightRow } from '@/components/ui/product-insight-row';
+import { ScoreBadge } from '@/components/ui/score-badge';
+import { SectionCard } from '@/components/ui/section-card';
+import { Palette, spacing } from '@/constants/theme';
 import { captureError, trackEvent } from '@/src/lib/observability/monitoring';
 import { productsService } from '@/src/services/products/products-service';
 import { userService } from '@/src/services/user/user-service';
@@ -13,6 +19,7 @@ import type { Product } from '@/src/types/product';
 
 export default function ProductResultScreen() {
   const { barcode } = useLocalSearchParams<{ barcode: string }>();
+  const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -39,13 +46,7 @@ export default function ProductResultScreen() {
 
         if (found) {
           trackEvent('product_loaded', { productId: found.id, barcode });
-
-          await userService.addScanHistory({
-            barcode,
-            productId: found.id,
-            productName: found.name,
-          });
-
+          await userService.addScanHistory({ barcode, productId: found.id, productName: found.name });
           const favorites = await userService.getFavorites();
           if (mounted) {
             setIsFavorite(favorites.items.some((item) => item.id === found.id));
@@ -57,7 +58,6 @@ export default function ProductResultScreen() {
         if (mounted) {
           setIsLoading(false);
         }
-
         captureError(error, { scope: 'screen.product.load', barcode });
       }
     }
@@ -75,7 +75,6 @@ export default function ProductResultScreen() {
     }
 
     setIsTogglingFavorite(true);
-
     try {
       const favoriteState = await userService.toggleFavorite(product.id, product.barcode);
       setIsFavorite(favoriteState);
@@ -89,66 +88,96 @@ export default function ProductResultScreen() {
 
   if (isLoading) {
     return (
-      <ScreenShell title="Carregando produto" subtitle="Estamos buscando os dados mais recentes.">
-        <ThemedText>Buscando informações...</ThemedText>
+      <ScreenShell title="Analisando produto" subtitle="Estamos carregando os detalhes da composição.">
+        <LoadingState label="Buscando informações do rótulo..." />
       </ScreenShell>
     );
   }
 
   if (!product) {
     return (
-      <ScreenShell title="Produto não encontrado" subtitle="Quer contribuir? Envie fotos do rótulo.">
-        <Link href="/not-found-product">
-          <ThemedText>Ir para tela de contribuição</ThemedText>
+      <ScreenShell title="Produto não encontrado" subtitle="Você pode contribuir para melhorar o catálogo.">
+        <EmptyState
+          title="Sem cadastro para este código"
+          description="Tire fotos do rótulo para incluir esse item na base de análise."
+        />
+        <Link href="/not-found-product" asChild>
+          <ThemedText type="link">Contribuir com este produto</ThemedText>
         </Link>
       </ScreenShell>
     );
   }
 
   return (
-    <ScreenShell title={product.name} subtitle={`${product.brand} • ${product.category}`}>
-      <ScoreBadge score={product.score} classification={product.classification} />
+    <ScreenShell title="Resultado da análise" subtitle="Leitura clara para decidir rápido e com confiança.">
+      <ProductHeader product={product} />
 
-      <Pressable
-        style={[styles.favoriteButton, isTogglingFavorite && styles.favoriteButtonDisabled]}
-        onPress={handleToggleFavorite}
-        disabled={isTogglingFavorite}
-      >
-        <ThemedText style={styles.favoriteLabel}>
-          {isFavorite ? 'Remover dos favoritos' : 'Salvar nos favoritos'}
-        </ThemedText>
-      </Pressable>
-
-      <View style={styles.section}>
-        <ThemedText type="subtitle">Pontos de atenção</ThemedText>
-        {product.warnings.map((item) => (
-          <ThemedText key={item}>• {item}</ThemedText>
-        ))}
+      <View accessible accessibilityLabel={`Nota geral ${product.score} de 100, classificação ${product.classification}`}>
+        <ScoreBadge score={product.score} classification={product.classification} size="lg" />
       </View>
 
-      <View style={styles.section}>
-        <ThemedText type="subtitle">Alternativas melhores</ThemedText>
-        {product.alternatives.map((item) => (
-          <ThemedText key={item.id}>{item.name} — nota {item.score}</ThemedText>
-        ))}
-      </View>
+      <SectionCard title="Pontos de atenção" subtitle="Fatores que merecem cuidado">
+        {product.warnings.length > 0 ? (
+          product.warnings.map((item) => (
+            <ProductInsightRow key={item} text={item} color={Palette.danger} />
+          ))
+        ) : (
+          <ThemedText>Sem alertas críticos identificados.</ThemedText>
+        )}
+      </SectionCard>
 
-      <Link href="/compare">
-        <ThemedText style={styles.link}>Comparar produtos</ThemedText>
-      </Link>
+      <SectionCard title="Pontos positivos" subtitle="Aspectos favoráveis deste produto">
+        {product.positives.length > 0 ? (
+          product.positives.map((item) => (
+            <ProductInsightRow key={item} text={item} color={Palette.success} />
+          ))
+        ) : (
+          <ThemedText>Nenhum destaque positivo informado.</ThemedText>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Composição" subtitle="Ingredientes críticos ou relevantes">
+        {product.criticalIngredients.length > 0 ? (
+          product.criticalIngredients.map((item) => (
+            <ProductInsightRow key={item} text={item} color={Palette.warning} />
+          ))
+        ) : (
+          <ThemedText>Não há ingredientes críticos cadastrados para este item.</ThemedText>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Alternativas melhores" subtitle="Opções com nota superior">
+        {product.alternatives.length > 0 ? (
+          product.alternatives.map((item) => (
+            <View key={item.id} style={styles.alternativeRow}>
+              <ThemedText style={styles.flexItem}>{item.name}</ThemedText>
+              <ThemedText type="defaultSemiBold">{item.score}/100</ThemedText>
+            </View>
+          ))
+        ) : (
+          <ThemedText>Nenhuma alternativa sugerida até o momento.</ThemedText>
+        )}
+      </SectionCard>
+
+      <View style={styles.actions}>
+        <ActionButton
+          label={isFavorite ? 'Remover dos favoritos' : 'Salvar nos favoritos'}
+          onPress={handleToggleFavorite}
+          disabled={isTogglingFavorite}
+          variant="primary"
+        />
+        <ActionButton label="Escanear outro produto" onPress={() => router.push('/scanner')} variant="secondary" />
+      </View>
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  section: { borderTopWidth: 1, borderTopColor: Palette.border, paddingTop: 10, gap: 4 },
-  link: { color: Palette.secondary },
-  favoriteButton: {
-    borderRadius: 10,
-    backgroundColor: Palette.primary,
-    paddingVertical: 10,
-    alignItems: 'center',
+  alternativeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
-  favoriteButtonDisabled: { opacity: 0.7 },
-  favoriteLabel: { color: '#fff', fontWeight: '700' },
+  flexItem: { flex: 1 },
+  actions: { gap: spacing.sm },
 });

@@ -2,11 +2,12 @@ import { useAuth } from '@/src/hooks/use-auth';
 import { captureError } from '@/src/lib/observability/monitoring';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 
 import { ScreenShell } from '@/components/screen-shell';
-import { ThemedText } from '@/components/themed-text';
-import { Palette } from '@/constants/theme';
+import { ActionButton } from '@/components/ui/action-button';
+import { ErrorState } from '@/components/ui/error-state';
+import { Palette, radius, spacing } from '@/constants/theme';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -29,47 +30,43 @@ export default function RegisterScreen() {
   }
 
   return (
-    <ScreenShell title="Criar conta" subtitle="Comece grátis e acompanhe suas escolhas.">
-      <TextInput placeholder="Nome" style={styles.input} value={name} onChangeText={setName} />
-      <TextInput
-        placeholder="E-mail"
-        style={styles.input}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
+    <ScreenShell title="Criar conta" subtitle="Comece grátis e acompanhe suas escolhas com clareza.">
+      <View style={styles.form}>
+        <TextInput placeholder="Nome" style={styles.input} value={name} onChangeText={setName} />
+        <TextInput
+          placeholder="E-mail"
+          style={styles.input}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <TextInput
+          placeholder="Senha"
+          style={styles.input}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+      </View>
+      {error ? <ErrorState title="Falha no cadastro" description={error} /> : null}
+      <ActionButton
+        label={isAuthenticating ? 'Criando conta...' : 'Cadastrar'}
+        onPress={handleRegister}
+        disabled={isAuthenticating}
       />
-      <TextInput
-        placeholder="Senha"
-        style={styles.input}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      {error ? <ThemedText style={styles.error}>{error}</ThemedText> : null}
-      <Pressable style={[styles.button, isAuthenticating && styles.buttonDisabled]} onPress={handleRegister}>
-        <ThemedText style={styles.buttonLabel}>{isAuthenticating ? 'Criando conta...' : 'Cadastrar'}</ThemedText>
-      </Pressable>
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
+  form: { gap: spacing.sm },
   input: {
     borderWidth: 1,
     borderColor: Palette.border,
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: radius.md,
+    padding: spacing.md,
     backgroundColor: '#fff',
+    minHeight: 48,
   },
-  button: {
-    marginTop: 8,
-    backgroundColor: Palette.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  buttonDisabled: { opacity: 0.7 },
-  buttonLabel: { color: '#fff', fontWeight: '700' },
-  error: { color: '#b00020' },
 });

@@ -1,10 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 
 import { ScreenShell } from '@/components/screen-shell';
 import { ThemedText } from '@/components/themed-text';
-import { Palette } from '@/constants/theme';
+import { ActionButton } from '@/components/ui/action-button';
+import { SectionCard } from '@/components/ui/section-card';
+import { Palette, radius, spacing } from '@/constants/theme';
 import { trackEvent } from '@/src/lib/observability/monitoring';
 
 export default function ScannerScreen() {
@@ -27,52 +29,46 @@ export default function ScannerScreen() {
   }
 
   return (
-    <ScreenShell
-      title="Scanner"
-      subtitle="Leitura em modo manual (fallback). A integração por câmera está preparada para plugar módulo nativo."
-    >
-      <View style={styles.card}>
-        <ThemedText type="subtitle">Digite ou cole o código de barras</ThemedText>
+    <ScreenShell title="Scanner" subtitle="Modo manual para leitura rápida do código de barras.">
+      <SectionCard title="Digite ou cole o código" subtitle="Recomendado para testar fluxo e encontrar produtos.">
         <TextInput
           style={styles.input}
           keyboardType="number-pad"
           value={barcode}
           onChangeText={setBarcode}
           placeholder="Ex.: 7891000100103"
+          accessibilityLabel="Campo para código de barras"
         />
-        <Pressable
+        <ActionButton
           onPress={handleScan}
-          style={[styles.button, !canSubmit && styles.buttonDisabled]}
           disabled={!canSubmit}
-        >
-          <ThemedText style={styles.buttonText}>{isSubmitting ? 'Analisando...' : 'Analisar código'}</ThemedText>
-        </Pressable>
-      </View>
+          label={isSubmitting ? 'Analisando...' : 'Analisar produto'}
+        />
+      </SectionCard>
 
-      <ThemedText style={styles.hint}>
-        Dica: para validar fluxo completo, faça seed de produtos e use um barcode cadastrado no Firestore.
-      </ThemedText>
+      <View style={styles.tipBox}>
+        <ThemedText type="defaultSemiBold">Dica</ThemedText>
+        <ThemedText>Use códigos cadastrados na sua base Firebase para validar a experiência completa.</ThemedText>
+      </View>
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderRadius: 12,
-    borderColor: Palette.border,
-    borderWidth: 1,
-    padding: 14,
-    gap: 12,
-  },
   input: {
     borderWidth: 1,
     borderColor: Palette.border,
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: radius.md,
+    padding: spacing.md,
     backgroundColor: '#fff',
+    minHeight: 48,
   },
-  button: { backgroundColor: Palette.primary, padding: 14, borderRadius: 10, alignItems: 'center' },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: '#fff', fontWeight: '700' },
-  hint: { color: Palette.secondary },
+  tipBox: {
+    borderWidth: 1,
+    borderColor: '#CFE4D8',
+    borderRadius: radius.lg,
+    backgroundColor: '#F2FAF6',
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
 });

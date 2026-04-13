@@ -1,43 +1,58 @@
-import { Link } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 
 import { ScreenShell } from '@/components/screen-shell';
-import { ThemedText } from '@/components/themed-text';
-import { Palette } from '@/constants/theme';
-import { productService } from '@/src/services/product-service';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ProductCard } from '@/components/ui/product-card';
+import { ActionButton } from '@/components/ui/action-button';
+import { Palette, radius, spacing } from '@/constants/theme';
+import { productsService } from '@/src/services/products/products-service';
+import type { Product } from '@/src/types/product';
 
 export default function SearchScreen() {
   const [query, setQuery] = useState('');
-  const [firstBarcode, setFirstBarcode] = useState<string | null>(null);
+  const [results, setResults] = useState<Product[]>([]);
 
   const handleSearch = async () => {
-    const result = await productService.searchByName(query);
-    setFirstBarcode(result[0]?.barcode ?? null);
+    const result = await productsService.searchByName(query);
+    setResults(result);
   };
 
   return (
-    <ScreenShell title="Busca manual" subtitle="Não achou no scanner? Busque pelo nome.">
-      <TextInput style={styles.input} value={query} onChangeText={setQuery} placeholder="Ex: granola" />
-      <Pressable onPress={handleSearch} style={styles.button}>
-        <ThemedText style={styles.buttonText}>Buscar</ThemedText>
-      </Pressable>
+    <ScreenShell title="Busca manual" subtitle="Procure por nome para abrir a análise do produto.">
+      <View style={styles.searchRow}>
+        <TextInput
+          style={styles.input}
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Ex: granola sem açúcar"
+          accessibilityLabel="Campo de busca por nome do produto"
+          returnKeyType="search"
+          onSubmitEditing={handleSearch}
+        />
+        <ActionButton label="Buscar" onPress={handleSearch} />
+      </View>
 
-      {firstBarcode ? (
-        <Link href={`/product/${firstBarcode}`}>
-          <ThemedText style={styles.link}>Ver primeiro resultado</ThemedText>
-        </Link>
+      {results.length === 0 ? (
+        <EmptyState
+          title="Digite para buscar"
+          description="Você pode pesquisar por nome, depois abrir o resultado completo."
+        />
       ) : (
-        <ThemedText style={styles.empty}>Nenhum resultado ainda.</ThemedText>
+        results.map((item) => <ProductCard key={item.id} product={item} />)
       )}
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  input: { borderWidth: 1, borderColor: Palette.border, borderRadius: 10, padding: 12 },
-  button: { backgroundColor: Palette.primary, padding: 14, borderRadius: 10, alignItems: 'center' },
-  buttonText: { color: '#fff', fontWeight: '700' },
-  link: { color: Palette.secondary },
-  empty: { color: Palette.muted },
+  searchRow: { gap: spacing.sm },
+  input: {
+    borderWidth: 1,
+    borderColor: Palette.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    backgroundColor: '#fff',
+    minHeight: 48,
+  },
 });
