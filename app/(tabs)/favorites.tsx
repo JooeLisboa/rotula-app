@@ -1,8 +1,8 @@
-import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
 
 import { ScreenShell } from '@/components/screen-shell';
-import { ThemedText } from '@/components/themed-text';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ProductCard } from '@/components/ui/product-card';
 import { captureError } from '@/src/lib/observability/monitoring';
 import { userService } from '@/src/services/user/user-service';
 import type { Product } from '@/src/types/product';
@@ -22,15 +22,14 @@ export default function FavoritesScreen() {
   }, []);
 
   return (
-    <ScreenShell title="Favoritos" subtitle="Seus produtos salvos para comparar depois.">
+    <ScreenShell title="Favoritos" subtitle="Seus produtos salvos para comparar com calma.">
       {favorites.length === 0 ? (
-        <ThemedText>Estado vazio: você ainda não favoritou produtos.</ThemedText>
+        <EmptyState
+          title="Nenhum favorito ainda"
+          description="Ao salvar um produto, ele fica aqui para revisão rápida."
+        />
       ) : (
-        favorites.map((product) => (
-          <Link key={product.id} href={`/product/${product.barcode}`}>
-            <ThemedText>• {product.name}</ThemedText>
-          </Link>
-        ))
+        favorites.map((product) => <ProductCard key={product.id} product={product} />)
       )}
     </ScreenShell>
   );
