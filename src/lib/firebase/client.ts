@@ -1,22 +1,16 @@
-import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getAuth, initializeAuth, type Persistence } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
+import { type FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
+import { getAuth, initializeAuth, type Auth, type Persistence } from 'firebase/auth';
+import { type Firestore, getFirestore } from 'firebase/firestore';
+import { getDownloadURL, getStorage, ref, type FirebaseStorage, uploadBytes } from 'firebase/storage';
 import { Platform } from 'react-native';
 
-import { env } from '@/src/config/env';
+import { assertFirebaseEnv } from '@/src/config/env';
 import { logger } from '@/src/lib/observability/logger';
 
-const firebaseConfig = {
-  apiKey: env.firebaseApiKey,
-  authDomain: env.firebaseAuthDomain,
-  projectId: env.firebaseProjectId,
-  storageBucket: env.firebaseStorageBucket,
-  messagingSenderId: env.firebaseMessagingSenderId,
-  appId: env.firebaseAppId,
-};
-
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+let firebaseAppInstance: FirebaseApp | null = null;
+let firebaseAuthInstance: Auth | null = null;
+let firestoreInstance: Firestore | null = null;
+let firebaseStorageInstance: FirebaseStorage | null = null;
 
 function createReactNativePersistence(asyncStorage: {
   setItem: (key: string, value: string) => Promise<void>;
@@ -46,33 +40,59 @@ function createReactNativePersistence(asyncStorage: {
   } as Persistence;
 }
 
-function createAuth() {
-  if (Platform.OS === 'web') {
-    return getAuth(app);
+export function getFirebaseApp() {
+  if (!firebaseAppInstance) {
+    const firebaseConfig = assertFirebaseEnv();
+    firebaseAppInstance = getApps().length ? getApp() : initializeApp(firebaseConfig);
   }
 
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-    const persistence = createReactNativePersistence(AsyncStorage);
-
-    return initializeAuth(app, { persistence });
-  } catch (error) {
-    logger.warn('firebase.auth', 'Falling back to non-persistent auth session on React Native.', {
-      reason: error instanceof Error ? error.message : String(error),
-    });
-
-    return getAuth(app);
-  }
+  return firebaseAppInstance;
 }
 
-export const firebaseApp = app;
-export const auth = createAuth();
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+export function getFirebaseAuth() {
+  if (!firebaseAuthInstance) {
+    const app = getFirebaseApp();
+
+    if (Platform.OS === 'web') {
+      firebaseAuthInstance = getAuth(app);
+      return firebaseAuthInstance;
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      const persistence = createReactNativePersistence(AsyncStorage);
+      firebaseAuthInstance = initializeAuth(app, { persistence });
+    } catch (error) {
+      logger.warn('firebase.auth', 'Falling back to non-persistent auth session on React Native.', {
+        reason: error instanceof Error ? error.message : String(error),
+      });
+
+      firebaseAuthInstance = getAuth(app);
+    }
+  }
+
+  return firebaseAuthInstance;
+}
+
+export function getFirebaseDb() {
+  if (!firestoreInstance) {
+    firestoreInstance = getFirestore(getFirebaseApp());
+  }
+
+  return firestoreInstance;
+}
+
+export function getFirebaseStorage() {
+  if (!firebaseStorageInstance) {
+    firebaseStorageInstance = getStorage(getFirebaseApp());
+  }
+
+  return firebaseStorageInstance;
+}
 
 export async function uploadStorageFile(path: string, blob: Blob | Uint8Array | ArrayBuffer) {
-  const fileRef = ref(storage, path);
+  const fileRef = ref(getFirebaseStorage(), path);
   await uploadBytes(fileRef, blob);
   return getDownloadURL(fileRef);
 }

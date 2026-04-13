@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 
-import { auth, db } from '@/src/lib/firebase/client';
+import { getFirebaseAuth, getFirebaseDb } from '@/src/lib/firebase/client';
 import type { ForgotPasswordInput, LoginInput, RegisterInput, Session } from '@/src/types/auth';
 
 type AuthError = Error & { code?: string; originalMessage?: string };
@@ -61,7 +61,7 @@ async function toSession(user: User): Promise<Session> {
 
 export const authRepository = {
   onSessionChanged(handler: (session: Session | null) => void) {
-    return onAuthStateChanged(auth, async (user) => {
+    return onAuthStateChanged(getFirebaseAuth(), async (user) => {
       if (!user) {
         handler(null);
         return;
@@ -73,7 +73,7 @@ export const authRepository = {
 
   async login(input: LoginInput): Promise<Session> {
     try {
-      const credential = await signInWithEmailAndPassword(auth, input.email, input.password);
+      const credential = await signInWithEmailAndPassword(getFirebaseAuth(), input.email, input.password);
       return toSession(credential.user);
     } catch (error) {
       throw mapFirebaseAuthError(error);
@@ -82,6 +82,8 @@ export const authRepository = {
 
   async register(input: RegisterInput): Promise<Session> {
     try {
+      const auth = getFirebaseAuth();
+      const db = getFirebaseDb();
       const credential = await createUserWithEmailAndPassword(auth, input.email, input.password);
       await updateProfile(credential.user, { displayName: input.name });
 
@@ -123,18 +125,18 @@ export const authRepository = {
 
       return toSession(credential.user);
     } catch (error) {
-      await signOut(auth).catch(() => undefined);
+      await signOut(getFirebaseAuth()).catch(() => undefined);
       throw mapFirebaseAuthError(error);
     }
   },
 
   async logout() {
-    await signOut(auth);
+    await signOut(getFirebaseAuth());
   },
 
   async forgotPassword(input: ForgotPasswordInput) {
     try {
-      await sendPasswordResetEmail(auth, input.email);
+      await sendPasswordResetEmail(getFirebaseAuth(), input.email);
     } catch (error) {
       throw mapFirebaseAuthError(error);
     }
