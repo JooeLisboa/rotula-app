@@ -1,10 +1,6 @@
-import { mockProducts } from '@/src/mocks/products';
+import { productsService } from '@/src/services/products/products-service';
 
 export const productService = {
-  findByBarcode: async (barcode: string) =>
-    mockProducts.find((product) => product.barcode === barcode) ?? null,
-  searchByName: async (query: string) =>
-    mockProducts.filter((product) =>
-      product.name.toLowerCase().includes(query.toLowerCase().trim())
-    ),
+  findByBarcode: productsService.findByBarcode,
+  searchByName: productsService.searchByName,
 };

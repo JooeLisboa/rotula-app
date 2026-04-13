@@ -1,31 +1,78 @@
-import { Link } from 'expo-router';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { ScreenShell } from '@/components/screen-shell';
 import { ThemedText } from '@/components/themed-text';
 import { Palette } from '@/constants/theme';
+import { trackEvent } from '@/src/lib/observability/monitoring';
 
 export default function ScannerScreen() {
-  const sampleBarcode = '7891000100103';
+  const router = useRouter();
+  const [barcode, setBarcode] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const normalizedBarcode = useMemo(() => barcode.trim(), [barcode]);
+  const canSubmit = normalizedBarcode.length >= 8 && !isSubmitting;
+
+  async function handleScan() {
+    if (!canSubmit) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    trackEvent('barcode_scanned', { barcode: normalizedBarcode, mode: 'manual' });
+    router.push(`/product/${normalizedBarcode}`);
+    setTimeout(() => setIsSubmitting(false), 400);
+  }
 
   return (
-    <ScreenShell title="Scanner" subtitle="Aponte para o código de barras ou digite manualmente.">
-      <TextInput style={styles.input} value={sampleBarcode} editable={false} />
-      <Link href="/scan-loading" asChild>
-        <Pressable style={styles.button}>
-          <ThemedText style={styles.buttonText}>Simular leitura</ThemedText>
+    <ScreenShell
+      title="Scanner"
+      subtitle="Leitura em modo manual (fallback). A integração por câmera está preparada para plugar módulo nativo."
+    >
+      <View style={styles.card}>
+        <ThemedText type="subtitle">Digite ou cole o código de barras</ThemedText>
+        <TextInput
+          style={styles.input}
+          keyboardType="number-pad"
+          value={barcode}
+          onChangeText={setBarcode}
+          placeholder="Ex.: 7891000100103"
+        />
+        <Pressable
+          onPress={handleScan}
+          style={[styles.button, !canSubmit && styles.buttonDisabled]}
+          disabled={!canSubmit}
+        >
+          <ThemedText style={styles.buttonText}>{isSubmitting ? 'Analisando...' : 'Analisar código'}</ThemedText>
         </Pressable>
-      </Link>
-      <Link href="/camera-permission">
-        <ThemedText style={styles.link}>Permissão de câmera</ThemedText>
-      </Link>
+      </View>
+
+      <ThemedText style={styles.hint}>
+        Dica: para validar fluxo completo use os códigos dos mocks, como 7891000100103.
+      </ThemedText>
     </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  input: { borderWidth: 1, borderColor: Palette.border, borderRadius: 10, padding: 12 },
+  card: {
+    borderRadius: 12,
+    borderColor: Palette.border,
+    borderWidth: 1,
+    padding: 14,
+    gap: 12,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: Palette.border,
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: '#fff',
+  },
   button: { backgroundColor: Palette.primary, padding: 14, borderRadius: 10, alignItems: 'center' },
+  buttonDisabled: { opacity: 0.5 },
   buttonText: { color: '#fff', fontWeight: '700' },
-  link: { color: Palette.secondary },
+  hint: { color: Palette.secondary },
 });
