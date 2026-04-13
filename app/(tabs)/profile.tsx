@@ -1,6 +1,9 @@
 import { useAuth } from '@/src/hooks/use-auth';
 import { captureError } from '@/src/lib/observability/monitoring';
+import { userService } from '@/src/services/user/user-service';
+import type { UserProfile } from '@/src/types/user';
 import { Link, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { ScreenShell } from '@/components/screen-shell';
@@ -10,6 +13,16 @@ import { Palette } from '@/constants/theme';
 export default function ProfileScreen() {
   const router = useRouter();
   const { session, logout } = useAuth();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    userService
+      .getProfile()
+      .then(setProfile)
+      .catch((error) => {
+        captureError(error, { scope: 'screen.profile.load' });
+      });
+  }, []);
 
   async function handleLogout() {
     try {
@@ -22,8 +35,8 @@ export default function ProfileScreen() {
 
   return (
     <ScreenShell title="Perfil" subtitle="Preferências, assinatura e privacidade.">
-      <ThemedText>{session?.user.name}</ThemedText>
-      <ThemedText>{session?.user.email}</ThemedText>
+      <ThemedText>{profile?.name ?? session?.user.name}</ThemedText>
+      <ThemedText>{profile?.email ?? session?.user.email}</ThemedText>
 
       <Link href="/premium">
         <ThemedText>Assinar plano Premium</ThemedText>

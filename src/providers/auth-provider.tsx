@@ -1,6 +1,4 @@
-import { apiClient } from '@/src/lib/api/http-client';
 import { captureError, trackEvent } from '@/src/lib/observability/monitoring';
-import { persistentStore } from '@/src/lib/storage/persistent-store';
 import { authService } from '@/src/services/auth/auth-service';
 import type { LoginInput, RegisterInput, Session } from '@/src/types/auth';
 import { createContext, useCallback, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
@@ -15,8 +13,6 @@ interface AuthContextValue {
   logout: () => Promise<void>;
 }
 
-const SESSION_KEY = 'rotula.session.v1';
-
 export const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: PropsWithChildren) {
@@ -25,94 +21,56 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   useEffect(() => {
-    let active = true;
+    const unsubscribe = authService.onSessionChanged((nextSession) => {
+      setSession(nextSession);
+      setIsInitializing(false);
+    });
 
-    async function bootstrap() {
-      try {
-        const storedSession = await persistentStore.getItem<Session>(SESSION_KEY);
-        if (active && storedSession) {
-          setSession(storedSession);
-        }
-      } catch (error) {
-        captureError(error, { scope: 'auth.bootstrap' });
-      } finally {
-        if (active) {
-          setIsInitializing(false);
-        }
-      }
-    }
-
-    bootstrap();
-
-    return () => {
-      active = false;
-    };
+    return unsubscribe;
   }, []);
 
-  useEffect(() => {
-    apiClient.setTokenProvider(() => session?.accessToken ?? null);
-  }, [session]);
+  const login = useCallback(async (payload: LoginInput) => {
+    setIsAuthenticating(true);
 
-  const persistSession = useCallback(async (value: Session | null) => {
-    if (!value) {
-      await persistentStore.removeItem(SESSION_KEY);
-      return;
+    try {
+      const nextSession = await authService.login(payload);
+      setSession(nextSession);
+      trackEvent('auth_login_success', { userId: nextSession.user.id });
+    } catch (error) {
+      trackEvent('auth_login_failure', { email: payload.email });
+      captureError(error, { scope: 'auth.login' });
+      throw error;
+    } finally {
+      setIsAuthenticating(false);
     }
-
-    await persistentStore.setItem(SESSION_KEY, value);
   }, []);
 
-  const login = useCallback(
-    async (payload: LoginInput) => {
-      setIsAuthenticating(true);
+  const register = useCallback(async (payload: RegisterInput) => {
+    setIsAuthenticating(true);
 
-      try {
-        const nextSession = await authService.login(payload);
-        setSession(nextSession);
-        await persistSession(nextSession);
-        trackEvent('login_success', { userId: nextSession.user.id });
-      } catch (error) {
-        trackEvent('login_failure', { email: payload.email });
-        captureError(error, { scope: 'auth.login' });
-        throw error;
-      } finally {
-        setIsAuthenticating(false);
-      }
-    },
-    [persistSession]
-  );
-
-  const register = useCallback(
-    async (payload: RegisterInput) => {
-      setIsAuthenticating(true);
-
-      try {
-        const nextSession = await authService.register(payload);
-        setSession(nextSession);
-        await persistSession(nextSession);
-        trackEvent('register_success', { userId: nextSession.user.id });
-      } catch (error) {
-        trackEvent('register_failure', { email: payload.email });
-        captureError(error, { scope: 'auth.register' });
-        throw error;
-      } finally {
-        setIsAuthenticating(false);
-      }
-    },
-    [persistSession]
-  );
+    try {
+      const nextSession = await authService.register(payload);
+      setSession(nextSession);
+      trackEvent('auth_register_success', { userId: nextSession.user.id });
+    } catch (error) {
+      trackEvent('auth_register_failure', { email: payload.email });
+      captureError(error, { scope: 'auth.register' });
+      throw error;
+    } finally {
+      setIsAuthenticating(false);
+    }
+  }, []);
 
   const logout = useCallback(async () => {
     try {
       await authService.logout();
       setSession(null);
-      await persistSession(null);
-      trackEvent('logout', {});
+      trackEvent('auth_logout', {});
     } catch (error) {
       captureError(error, { scope: 'auth.logout' });
       throw error;
     }
-  }, [persistSession]);
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({

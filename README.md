@@ -1,147 +1,253 @@
-# Rótula App
+# Rótula App (Firebase-first)
 
-Base mobile profissional com Expo + Expo Router + TypeScript para leitura de produtos por código de barras, autenticação e evolução para backend real.
+Aplicativo Expo + React Native com arquitetura orientada a Firebase (Auth + Firestore + Storage), usando Expo Router e TypeScript.
 
-## O que evoluiu nesta base
-- Auth provider com sessão persistida e fluxo login/logout.
-- Auth guard centralizado para separar rotas públicas e privadas.
-- Camada de dados com HTTP client central, tipos e services por domínio.
-- Observabilidade inicial (eventos + captura global de erros).
-- Pipeline de CI (lint + typecheck + validação de rotas/build web).
+## Visão geral
 
-## Stack
-- React Native 0.81
+Esta base migrou de uma arquitetura HTTP/mock para **backend 100% Firebase no app client**:
+- Autenticação real via Firebase Authentication.
+- Dados de perfil, favoritos, histórico e produtos em Cloud Firestore.
+- Base de Cloud Storage preparada para avatares e imagens de produtos.
+- Regras iniciais de segurança para Firestore/Storage.
+
+## Stack atual
+
 - Expo SDK 54
+- React Native 0.81
 - Expo Router 6
 - TypeScript (strict)
-- ESLint (Expo config)
+- Firebase JS SDK 12
+  - Authentication
+  - Cloud Firestore
+  - Cloud Storage
+- Firebase Hosting (web já existente no projeto)
 
 ## Arquitetura
+
 ```bash
 app/
-  _layout.tsx
-  index.tsx
-  (onboarding)/
-    _layout.tsx
-    index.tsx
   (auth)/
-    _layout.tsx
-    login.tsx
-    register.tsx
+  (onboarding)/
   (tabs)/
-  scanner.tsx
   product/[barcode].tsx
+  scanner.tsx
 src/
   config/env.ts
-  providers/auth-provider.tsx
-  hooks/use-auth.ts
-  components/auth-gate.tsx
-  lib/api/http-client.ts
-  lib/storage/persistent-store.ts
-  lib/observability/*
-  services/auth/*
-  services/products/*
-  services/user/*
-  types/*
-.github/workflows/ci.yml
+  lib/firebase/
+    client.ts
+    storage.ts
+  providers/
+    auth-provider.tsx
+  hooks/
+    use-auth.ts
+  repositories/
+    auth-repository.ts
+    product-repository.ts
+    user-repository.ts
+  services/
+    auth/
+    products/
+    user/
+  types/
+    auth.ts
+    product.ts
+    user.ts
+    storage.ts
+firestore.rules
+storage.rules
 ```
 
-## Fluxo de autenticação
-1. App inicia e o `AuthProvider` reidrata sessão persistida.
-2. `AuthGate` decide redirecionamento:
-   - sem sessão: apenas `(onboarding)` e `(auth)`
-   - com sessão: redireciona para `(tabs)`
-3. Login/registro persistem tokens e usuário.
-4. Logout limpa sessão e retorna para área pública.
+## Firebase no projeto
 
-## Camada de API
-- `src/lib/api/http-client.ts`: cliente HTTP centralizado com suporte a `Authorization`.
-- `src/config/env.ts`: configuração de ambiente (`EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_API_MODE`).
-- Services por domínio:
-  - `authService`
-  - `productsService`
-  - `userService`
+### Authentication
+- Login com e-mail/senha.
+- Cadastro com e-mail/senha.
+- Logout.
+- Bootstrap de sessão por `onAuthStateChanged` no provider.
+- Método preparado para reset de senha (`forgotPassword`) no serviço.
+- Auth guard com redirecionamento entre onboarding/auth/área autenticada.
 
-### Modo mock vs live
-- `EXPO_PUBLIC_API_MODE=mock` (default): usa dados e respostas locais estruturadas.
-- `EXPO_PUBLIC_API_MODE=live`: usa `fetch` para backend real.
+### Firestore
+Coleções modeladas:
+- `users`
+- `user_profiles`
+- `user_preferences`
+- `scan_history`
+- `favorites`
+- `products`
+- `product_alternatives`
+- `categories`
+- `brands`
 
-## Observabilidade
-- `initMonitoring()` registra handler global de erro.
-- `trackEvent()` para eventos relevantes de produto/autenticação.
-- `captureError()` centraliza logging de exceções.
+### Storage
+Base preparada para:
+- `user_avatars/{uid}/...`
+- `product_images/{barcode}/...`
+- `assets/...`
 
-Eventos já instrumentados:
-- `login_success`
-- `login_failure`
-- `register_success`
-- `register_failure`
-- `logout`
-- `auth_guard_redirect`
+Helpers implementados:
+- `uploadUserAvatar`
+- `uploadProductImage`
+
+## Estrutura sugerida dos documentos
+
+### `products/{barcode}`
+```json
+{
+  "barcode": "7891000100103",
+  "name": "Produto X",
+  "brand": "Marca Y",
+  "category": "alimento",
+  "score": 83,
+  "classification": "bom",
+  "criticalIngredients": [],
+  "positives": [],
+  "warnings": [],
+  "isFeatured": true,
+  "updatedAt": "timestamp"
+}
+```
+
+### `favorites/{uid_productId}`
+```json
+{
+  "uid": "authUid",
+  "productId": "productDocId",
+  "barcode": "7891000100103",
+  "createdAt": "timestamp"
+}
+```
+
+### `scan_history/{autoId}`
+```json
+{
+  "uid": "authUid",
+  "barcode": "7891000100103",
+  "productId": "productDocId",
+  "productName": "Produto X",
+  "scannedAt": "timestamp"
+}
+```
+
+## Variáveis de ambiente
+
+Copie o arquivo de exemplo:
+
+```bash
+cp .env.example .env
+```
+
+Preencha:
+
+```bash
+EXPO_PUBLIC_FIREBASE_API_KEY=
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+EXPO_PUBLIC_FIREBASE_APP_ID=
+```
+
+> `.env` já está fora do git via `.gitignore`.
+
+## Como obter as chaves no Firebase Console
+
+1. Acesse **Project settings** no Firebase Console.
+2. Em **Your apps**, selecione app web existente (ou crie um).
+3. Copie os campos de config para `.env`.
+4. Em **Authentication**, habilite `Email/Password`.
+5. Em **Firestore Database**, crie banco no modo produção.
+6. Em **Storage**, habilite o bucket padrão.
+
+## Como rodar localmente
+
+```bash
+npm install
+npm run start
+```
+
+Também disponível:
+
+```bash
+npm run web
+npm run android
+npm run ios
+```
+
+## Como testar
+
+### Auth
+1. Abra `/ (auth) /register` e crie conta.
+2. Faça logout em perfil.
+3. Faça login novamente na tela de login.
+4. Reinicie o app e valide restauração de sessão.
+
+### Firestore
+1. Abra um produto por barcode existente em `products`.
+2. Favoritar/desfavoritar na tela de produto.
+3. Verificar listagem em `Favoritos`.
+4. Escanear/abrir produto e validar entrada no `Histórico`.
+
+### Storage
+Ainda não há UI de upload, mas os helpers já estão prontos em `src/lib/firebase/storage.ts`.
+
+## Deploy web
+
+Com Firebase Hosting já configurado, use fluxo já adotado pelo projeto. Exemplo comum:
+
+```bash
+npm run check:routes
+firebase deploy --only hosting
+```
+
+## Segurança
+
+- Regras em `firestore.rules`.
+- Regras em `storage.rules`.
+- Produtos públicos para leitura.
+- Escritas de catálogo restritas a admin claim.
+- Dados de favoritos/histórico/perfil isolados por `uid`.
+
+## Observabilidade (eventos)
+
+Eventos instrumentados:
+- `auth_login_success`
+- `auth_login_failure`
+- `auth_register_success`
+- `auth_logout`
 - `barcode_scanned`
 - `product_loaded`
 - `product_not_found`
-- `favorite_toggled`
+- `favorite_added`
+- `favorite_removed`
 
-## Scanner
-No estado atual do repositório, o scanner roda em **modo manual (fallback)** para manter compatibilidade com as dependências disponíveis no ambiente. O fluxo de leitura e navegação está pronto para receber módulo de câmera nativo em próximo passo (ex.: `expo-camera`).
+## Migração e seeds
 
-## CI
-Workflow em `.github/workflows/ci.yml` com:
-- `npm ci`
-- `npm run lint`
-- `npm run typecheck`
-- `npm run check:routes` (export web para validar árvore de rotas/build)
+### Já migrado para Firebase
+- Auth completo.
+- Produtos por barcode.
+- Favoritos por usuário.
+- Histórico por usuário.
+- Perfil por usuário.
 
-## Pré-requisitos
-- Node.js 20+
-- npm 10+
-- Expo Go (para testes em dispositivo)
+### Ainda depende de seed/manual
+- Catálogo inicial em `products`/`product_alternatives`.
+- Taxonomias em `categories` e `brands`.
+- Claims administrativas para escrita de catálogo.
 
-## Instalação
-```bash
-npm install
-```
+Há utilitário de seed simples baseado em mocks no repositório de produtos (`seedProductsFromMockIfEmpty`) para bootstrap em ambiente de desenvolvimento/admin.
 
-## Execução
-```bash
-npm run start
-npm run web
-npm run android
-```
+## Troubleshooting
 
-## Comandos de qualidade
-```bash
-npm run lint
-npm run typecheck
-npm run check:routes
-```
-Requer Android Studio + emulator ativo.
-
-## Quando usar `--tunnel`
-Use tunnel quando o QR Code não abre no celular por rede local (Wi-Fi corporativo, roteador isolando dispositivos, VPN etc.).
-
-## Variáveis de ambiente
-Crie `.env` (ou defina no shell):
-```bash
-EXPO_PUBLIC_API_URL=https://api.rotula.app/v1
-EXPO_PUBLIC_API_MODE=mock
-EXPO_PUBLIC_SENTRY_DSN=
-```
-
-## Troubleshooting rápido
-- **Abre na web e não abre no celular:** teste `npx expo start --tunnel`.
-- **Erro de rota:** rode `npm run check:routes` para validar árvore gerada.
-- **Erro de auth/redirect:** verifique logs de evento `auth_guard_redirect` no terminal.
-
-## O que ainda está mockado
-- Endpoints de auth, produtos e usuário em `API_MODE=mock`.
-- Scanner em fallback manual (sem leitura por câmera nativa instalada).
-- Integração de transporte com Sentry DSN está preparada no env, mas envio remoto não foi ativado por SDK dedicado.
+- **Erro `Missing required env var`**: revisar `.env`.
+- **Permissão negada no Firestore**: revisar login e regras.
+- **Produto não encontrado**: conferir se `products/{barcode}` existe.
+- **Falha de upload Storage**: validar regras e caminho de arquivo.
 
 ## Próximos passos recomendados
-1. Instalar SDK de câmera e ativar leitura em tempo real.
-2. Trocar `API_MODE=live` e conectar backend real.
-3. Adicionar refresh token automático na camada auth.
-4. Integrar transporte real de erros (Sentry SDK) e breadcrumbs.
-5. Adicionar testes automatizados de serviços e fluxos críticos.
+
+1. Adicionar tela de “esqueci minha senha”.
+2. Criar fluxo de edição de perfil com upload de avatar.
+3. Implementar busca de produtos com índice dedicado.
+4. Adicionar Cloud Functions para escrita administrativa controlada.
+5. Configurar analytics/monitoring remoto (ex.: Sentry SDK completo).
