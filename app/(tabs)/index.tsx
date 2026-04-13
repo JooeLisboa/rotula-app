@@ -1,14 +1,36 @@
 import { Link } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ScreenShell } from '@/components/screen-shell';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { ThemedText } from '@/components/themed-text';
 import { Palette } from '@/constants/theme';
-import { mockProducts } from '@/src/mocks/products';
+import { captureError } from '@/src/lib/observability/monitoring';
+import { productsService } from '@/src/services/products/products-service';
+import type { Product } from '@/src/types/product';
 
 export default function HomeScreen() {
-  const featured = mockProducts[0];
+  const [featured, setFeatured] = useState<Product | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    productsService
+      .getFeatured()
+      .then((result) => {
+        if (mounted) {
+          setFeatured(result);
+        }
+      })
+      .catch((error) => {
+        captureError(error, { scope: 'screen.home.featured' });
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   return (
     <ScreenShell title="Olá 👋" subtitle="Escaneie produtos e receba uma análise instantânea.">
@@ -20,11 +42,17 @@ export default function HomeScreen() {
 
       <View style={styles.card}>
         <ThemedText type="subtitle">Produto em destaque</ThemedText>
-        <ThemedText>{featured.name}</ThemedText>
-        <ScoreBadge score={featured.score} classification={featured.classification} />
-        <Link href={`/product/${featured.barcode}`}>
-          <ThemedText style={styles.link}>Ver análise completa</ThemedText>
-        </Link>
+        {featured ? (
+          <>
+            <ThemedText>{featured.name}</ThemedText>
+            <ScoreBadge score={featured.score} classification={featured.classification} />
+            <Link href={`/product/${featured.barcode}`}>
+              <ThemedText style={styles.link}>Ver análise completa</ThemedText>
+            </Link>
+          </>
+        ) : (
+          <ThemedText>Carregando destaque...</ThemedText>
+        )}
       </View>
     </ScreenShell>
   );
