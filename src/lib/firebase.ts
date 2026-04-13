@@ -1,1 +1,7 @@
-export { auth, db, firebaseApp, storage, uploadStorageFile } from '@/src/lib/firebase/client';
+export {
+  getFirebaseApp,
+  getFirebaseAuth,
+  getFirebaseDb,
+  getFirebaseStorage,
+  uploadStorageFile,
+} from '@/src/lib/firebase/client';

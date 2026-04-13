@@ -10,12 +10,12 @@ import {
   where,
 } from 'firebase/firestore';
 
-import { auth, db } from '@/src/lib/firebase/client';
+import { getFirebaseAuth, getFirebaseDb } from '@/src/lib/firebase/client';
 import { productRepository } from '@/src/repositories/product-repository';
 import type { FavoritesState, HistoryEntry, UserProfile } from '@/src/types/user';
 
 function getUid() {
-  const uid = auth.currentUser?.uid;
+  const uid = getFirebaseAuth().currentUser?.uid;
   if (!uid) {
     throw new Error('Usuário não autenticado.');
   }
@@ -25,10 +25,10 @@ function getUid() {
 export const userRepository = {
   async getProfile(): Promise<UserProfile> {
     const uid = getUid();
-    const profileSnapshot = await getDoc(doc(db, 'user_profiles', uid));
+    const profileSnapshot = await getDoc(doc(getFirebaseDb(), 'user_profiles', uid));
 
     if (!profileSnapshot.exists()) {
-      const currentUser = auth.currentUser;
+      const currentUser = getFirebaseAuth().currentUser;
       return {
         id: uid,
         name: currentUser?.displayName ?? 'Usuário',
@@ -48,7 +48,7 @@ export const userRepository = {
 
   async getHistory(): Promise<HistoryEntry[]> {
     const uid = getUid();
-    const snapshot = await getDocs(query(collection(db, 'scan_history'), where('uid', '==', uid)));
+    const snapshot = await getDocs(query(collection(getFirebaseDb(), 'scan_history'), where('uid', '==', uid)));
 
     return snapshot.docs
       .map((entry) => ({
@@ -64,7 +64,7 @@ export const userRepository = {
 
   async addScanHistory(input: { barcode: string; productId: string; productName: string }) {
     const uid = getUid();
-    const entryRef = doc(collection(db, 'scan_history'));
+    const entryRef = doc(collection(getFirebaseDb(), 'scan_history'));
     await setDoc(entryRef, {
       uid,
       barcode: input.barcode,
@@ -76,7 +76,7 @@ export const userRepository = {
 
   async getFavorites(): Promise<FavoritesState> {
     const uid = getUid();
-    const snapshot = await getDocs(query(collection(db, 'favorites'), where('uid', '==', uid)));
+    const snapshot = await getDocs(query(collection(getFirebaseDb(), 'favorites'), where('uid', '==', uid)));
 
     const products = await Promise.all(
       snapshot.docs.map(async (item) => {
@@ -93,7 +93,7 @@ export const userRepository = {
   async toggleFavorite(input: { productId: string; barcode: string }): Promise<boolean> {
     const uid = getUid();
     const favoriteId = `${uid}_${input.productId}`;
-    const favoriteRef = doc(db, 'favorites', favoriteId);
+    const favoriteRef = doc(getFirebaseDb(), 'favorites', favoriteId);
     const snapshot = await getDoc(favoriteRef);
 
     if (snapshot.exists()) {

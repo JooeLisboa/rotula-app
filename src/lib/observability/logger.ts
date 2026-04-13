@@ -1,7 +1,15 @@
 type Metadata = Record<string, unknown>;
 
+function safeStringify(value: unknown) {
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return '[unserializable-metadata]';
+  }
+}
+
 function format(scope: string, message: string, metadata?: Metadata) {
-  return `[${scope}] ${message}${metadata ? ` ${JSON.stringify(metadata)}` : ''}`;
+  return `[${scope}] ${message}${metadata ? ` ${safeStringify(metadata)}` : ''}`;
 }
 
 export const logger = {

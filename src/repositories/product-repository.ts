@@ -10,7 +10,7 @@ import {
   where,
 } from 'firebase/firestore';
 
-import { auth, db } from '@/src/lib/firebase/client';
+import { getFirebaseAuth, getFirebaseDb } from '@/src/lib/firebase/client';
 import { mockProducts } from '@/src/mocks/products';
 import type { Product, ProductAlternative } from '@/src/types/product';
 
@@ -33,7 +33,7 @@ function mapProduct(productId: string, data: Record<string, unknown>, alternativ
 
 async function loadAlternatives(productId: string): Promise<ProductAlternative[]> {
   const alternativesSnapshot = await getDocs(
-    query(collection(db, 'product_alternatives'), where('productId', '==', productId), limit(5))
+    query(collection(getFirebaseDb(), 'product_alternatives'), where('productId', '==', productId), limit(5))
   );
 
   return alternativesSnapshot.docs.map((item) => ({
@@ -46,7 +46,7 @@ async function loadAlternatives(productId: string): Promise<ProductAlternative[]
 
 export const productRepository = {
   async findByBarcode(barcode: string): Promise<Product | null> {
-    const productRef = doc(db, 'products', barcode);
+    const productRef = doc(getFirebaseDb(), 'products', barcode);
     const productSnapshot = await getDoc(productRef);
 
     if (!productSnapshot.exists()) {
@@ -58,7 +58,7 @@ export const productRepository = {
   },
 
   async getFeatured(): Promise<Product | null> {
-    const snapshot = await getDocs(query(collection(db, 'products'), where('isFeatured', '==', true), limit(1)));
+    const snapshot = await getDocs(query(collection(getFirebaseDb(), 'products'), where('isFeatured', '==', true), limit(1)));
     const first = snapshot.docs[0];
 
     if (!first) {
@@ -71,7 +71,7 @@ export const productRepository = {
 
   async searchByName(queryText: string): Promise<Product[]> {
     const normalized = queryText.trim().toLowerCase();
-    const snapshot = await getDocs(query(collection(db, 'products'), limit(25)));
+    const snapshot = await getDocs(query(collection(getFirebaseDb(), 'products'), limit(25)));
 
     const products = await Promise.all(
       snapshot.docs
@@ -83,14 +83,14 @@ export const productRepository = {
   },
 
   async seedProductsFromMockIfEmpty() {
-    const snapshot = await getDocs(query(collection(db, 'products'), limit(1)));
-    if (!snapshot.empty || auth.currentUser?.uid == null) {
+    const snapshot = await getDocs(query(collection(getFirebaseDb(), 'products'), limit(1)));
+    if (!snapshot.empty || getFirebaseAuth().currentUser?.uid == null) {
       return;
     }
 
     await Promise.all(
       mockProducts.map((product) =>
-        setDoc(doc(db, 'products', product.barcode), {
+        setDoc(doc(getFirebaseDb(), 'products', product.barcode), {
           ...product,
           isFeatured: product.id === mockProducts[0]?.id,
           updatedAt: serverTimestamp(),
