@@ -34,7 +34,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     try {
       const nextSession = await authService.login(payload);
-      setSession(nextSession);
       trackEvent('auth_login_success', { userId: nextSession.user.id });
     } catch (error) {
       trackEvent('auth_login_failure', { email: payload.email });
@@ -50,7 +49,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     try {
       const nextSession = await authService.register(payload);
-      setSession(nextSession);
       trackEvent('auth_register_success', { userId: nextSession.user.id });
     } catch (error) {
       trackEvent('auth_register_failure', { email: payload.email });
@@ -64,7 +62,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const logout = useCallback(async () => {
     try {
       await authService.logout();
-      setSession(null);
       trackEvent('auth_logout', {});
     } catch (error) {
       captureError(error, { scope: 'auth.logout' });

@@ -9,6 +9,16 @@ import { ActionButton } from '@/components/ui/action-button';
 import { ErrorState } from '@/components/ui/error-state';
 import { Palette, radius, spacing } from '@/constants/theme';
 
+type AppError = Error & { code?: string; originalMessage?: string };
+
+function toScreenMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Erro ao cadastrar.';
+}
+
 export default function RegisterScreen() {
   const router = useRouter();
   const { register, isAuthenticating } = useAuth();
@@ -24,8 +34,15 @@ export default function RegisterScreen() {
       await register({ name: name.trim(), email: email.trim(), password });
       router.replace('/(tabs)');
     } catch (authError) {
-      captureError(authError, { scope: 'screen.register' });
-      setError(authError instanceof Error ? authError.message : 'Erro ao cadastrar.');
+      const detailedError = authError as AppError;
+
+      captureError(authError, {
+        scope: 'screen.register',
+        code: detailedError.code,
+        firebaseMessage: detailedError.originalMessage,
+      });
+
+      setError(toScreenMessage(authError));
     }
   }
 
