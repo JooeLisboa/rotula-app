@@ -121,3 +121,35 @@ src/
   repositories/
   providers/
 ```
+
+## Auth mobile (React Native) com persistência
+
+Para evitar sessão volátil no Expo mobile (e remover warning do Firebase Auth), use persistência com AsyncStorage:
+
+```bash
+npm install @react-native-async-storage/async-storage
+```
+
+A inicialização já está preparada em `src/lib/firebase/client.ts` com `initializeAuth` + persistência local baseada em AsyncStorage no React Native e `getAuth` na Web.
+
+## Troubleshooting de autenticação mobile
+
+### 1) Warning de persistência do Firebase Auth
+- Sintoma: warning informando que Auth no React Native está sem camada de persistência.
+- Correção: instalar `@react-native-async-storage/async-storage` e reiniciar o bundler com cache limpo.
+
+```bash
+npm run start -- --clear
+```
+
+### 2) `ERROR null` no log
+- Causa: erro desconhecido/`null` sendo serializado sem normalização.
+- Correção: monitoramento agora serializa `null`, `undefined`, objetos e `Error` corretamente, incluindo `code`, `message` e `stack`.
+
+### 3) Login/cadastro falhando sem mensagem clara
+- Causa: erro do Firebase era capturado sem detalhamento padronizado para UI/telemetria.
+- Correção: erros agora são normalizados no repositório de auth, preservando código original (`error.code`) e mensagem original do Firebase para diagnóstico.
+
+### 4) Estado inconsistente após falha no cadastro
+- Causa: possível criação parcial de conta seguida de falha em escrita no Firestore.
+- Correção: fluxo de register agora faz `signOut` defensivo no `catch` para manter estado local consistente.

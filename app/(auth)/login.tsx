@@ -10,6 +10,16 @@ import { ActionButton } from '@/components/ui/action-button';
 import { ErrorState } from '@/components/ui/error-state';
 import { Palette, radius, spacing } from '@/constants/theme';
 
+type AppError = Error & { code?: string; originalMessage?: string };
+
+function toScreenMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return 'Erro ao autenticar.';
+}
+
 export default function LoginScreen() {
   const router = useRouter();
   const { login, isAuthenticating } = useAuth();
@@ -24,8 +34,15 @@ export default function LoginScreen() {
       await login({ email: email.trim(), password });
       router.replace('/(tabs)');
     } catch (authError) {
-      captureError(authError, { scope: 'screen.login' });
-      setError(authError instanceof Error ? authError.message : 'Erro ao autenticar.');
+      const detailedError = authError as AppError;
+
+      captureError(authError, {
+        scope: 'screen.login',
+        code: detailedError.code,
+        firebaseMessage: detailedError.originalMessage,
+      });
+
+      setError(toScreenMessage(authError));
     }
   }
 
