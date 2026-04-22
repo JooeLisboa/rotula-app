@@ -12,6 +12,7 @@ import { ProductInsightRow } from '@/components/ui/product-insight-row';
 import { ScoreBadge } from '@/components/ui/score-badge';
 import { SectionCard } from '@/components/ui/section-card';
 import { Palette, spacing } from '@/constants/theme';
+import { useAuth } from '@/src/hooks/use-auth';
 import { captureError, trackEvent } from '@/src/lib/observability/monitoring';
 import { productsService } from '@/src/services/products/products-service';
 import { userService } from '@/src/services/user/user-service';
@@ -19,6 +20,8 @@ import type { Product } from '@/src/types/product';
 
 export default function ProductResultScreen() {
   const { barcode } = useLocalSearchParams<{ barcode: string }>();
+  const { session } = useAuth();
+  const uid = session?.user.id;
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,21 +38,19 @@ export default function ProductResultScreen() {
       }
 
       try {
-        const found = await productsService.findByBarcode(barcode);
+        const found = await productsService.getOrCreateProductByBarcode(barcode);
 
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
 
         setProduct(found);
         setIsLoading(false);
 
-        if (found) {
+        if (found && uid) {
           trackEvent('product_loaded', { productId: found.id, barcode });
-          await userService.addScanHistory({ barcode, productId: found.id, productName: found.name });
-          const favorites = await userService.getFavorites();
+          await userService.addScanToHistory(uid, barcode, found.name);
+          const favorite = await userService.isFavorite(uid, found.barcode);
           if (mounted) {
-            setIsFavorite(favorites.items.some((item) => item.id === found.id));
+            setIsFavorite(favorite);
           }
         } else {
           trackEvent('product_not_found', { barcode });
@@ -67,16 +68,16 @@ export default function ProductResultScreen() {
     return () => {
       mounted = false;
     };
-  }, [barcode]);
+  }, [barcode, uid]);
 
   async function handleToggleFavorite() {
-    if (!product || isTogglingFavorite) {
+    if (!product || !uid || isTogglingFavorite) {
       return;
     }
 
     setIsTogglingFavorite(true);
     try {
-      const favoriteState = await userService.toggleFavorite(product.id, product.barcode);
+      const favoriteState = await userService.toggleFavorite(uid, product.barcode);
       setIsFavorite(favoriteState);
       trackEvent(favoriteState ? 'favorite_added' : 'favorite_removed', { productId: product.id });
     } catch (error) {
@@ -101,7 +102,7 @@ export default function ProductResultScreen() {
           title="Sem cadastro para este código"
           description="Tire fotos do rótulo para incluir esse item na base de análise."
         />
-        <Link href="/not-found-product" asChild>
+        <Link href={{ pathname: '/not-found-product', params: { barcode } }} asChild>
           <ThemedText type="link">Contribuir com este produto</ThemedText>
         </Link>
       </ScreenShell>
@@ -118,9 +119,7 @@ export default function ProductResultScreen() {
 
       <SectionCard title="Pontos de atenção" subtitle="Fatores que merecem cuidado">
         {product.warnings.length > 0 ? (
-          product.warnings.map((item) => (
-            <ProductInsightRow key={item} text={item} color={Palette.danger} />
-          ))
+          product.warnings.map((item) => <ProductInsightRow key={item} text={item} color={Palette.danger} />)
         ) : (
           <ThemedText>Sem alertas críticos identificados.</ThemedText>
         )}
@@ -128,9 +127,7 @@ export default function ProductResultScreen() {
 
       <SectionCard title="Pontos positivos" subtitle="Aspectos favoráveis deste produto">
         {product.positives.length > 0 ? (
-          product.positives.map((item) => (
-            <ProductInsightRow key={item} text={item} color={Palette.success} />
-          ))
+          product.positives.map((item) => <ProductInsightRow key={item} text={item} color={Palette.success} />)
         ) : (
           <ThemedText>Nenhum destaque positivo informado.</ThemedText>
         )}
@@ -138,24 +135,9 @@ export default function ProductResultScreen() {
 
       <SectionCard title="Composição" subtitle="Ingredientes críticos ou relevantes">
         {product.criticalIngredients.length > 0 ? (
-          product.criticalIngredients.map((item) => (
-            <ProductInsightRow key={item} text={item} color={Palette.warning} />
-          ))
+          product.criticalIngredients.map((item) => <ProductInsightRow key={item} text={item} color={Palette.warning} />)
         ) : (
           <ThemedText>Não há ingredientes críticos cadastrados para este item.</ThemedText>
-        )}
-      </SectionCard>
-
-      <SectionCard title="Alternativas melhores" subtitle="Opções com nota superior">
-        {product.alternatives.length > 0 ? (
-          product.alternatives.map((item) => (
-            <View key={item.id} style={styles.alternativeRow}>
-              <ThemedText style={styles.flexItem}>{item.name}</ThemedText>
-              <ThemedText type="defaultSemiBold">{item.score}/100</ThemedText>
-            </View>
-          ))
-        ) : (
-          <ThemedText>Nenhuma alternativa sugerida até o momento.</ThemedText>
         )}
       </SectionCard>
 
@@ -163,7 +145,7 @@ export default function ProductResultScreen() {
         <ActionButton
           label={isFavorite ? 'Remover dos favoritos' : 'Salvar nos favoritos'}
           onPress={handleToggleFavorite}
-          disabled={isTogglingFavorite}
+          disabled={isTogglingFavorite || !uid}
           variant="primary"
         />
         <ActionButton label="Escanear outro produto" onPress={() => router.push('/scanner')} variant="secondary" />
@@ -173,11 +155,5 @@ export default function ProductResultScreen() {
 }
 
 const styles = StyleSheet.create({
-  alternativeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  flexItem: { flex: 1 },
   actions: { gap: spacing.sm },
 });

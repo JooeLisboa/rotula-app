@@ -5,29 +5,55 @@ import { StyleSheet, View } from 'react-native';
 import { ScreenShell } from '@/components/screen-shell';
 import { ThemedText } from '@/components/themed-text';
 import { EmptyState } from '@/components/ui/empty-state';
+import { LoadingState } from '@/components/ui/loading-state';
 import { SectionCard } from '@/components/ui/section-card';
 import { spacing } from '@/constants/theme';
+import { useAuth } from '@/src/hooks/use-auth';
 import { captureError } from '@/src/lib/observability/monitoring';
 import { userService } from '@/src/services/user/user-service';
 import type { HistoryEntry } from '@/src/types/user';
 
 export default function HistoryScreen() {
+  const { session } = useAuth();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+    const uid = session?.user.id;
+
+    if (!uid) {
+      setHistory([]);
+      setIsLoading(false);
+      return;
+    }
+
     userService
-      .getHistory()
+      .listHistory(uid)
       .then((entries) => {
-        setHistory(entries);
+        if (mounted) {
+          setHistory(entries);
+        }
       })
       .catch((error) => {
         captureError(error, { scope: 'screen.history.list' });
+      })
+      .finally(() => {
+        if (mounted) {
+          setIsLoading(false);
+        }
       });
-  }, []);
+
+    return () => {
+      mounted = false;
+    };
+  }, [session?.user.id]);
 
   return (
     <ScreenShell title="Histórico" subtitle="Sua linha do tempo de escaneamentos recentes.">
-      {history.length === 0 ? (
+      {isLoading ? (
+        <LoadingState label="Carregando histórico..." />
+      ) : history.length === 0 ? (
         <EmptyState
           title="Sem escaneamentos"
           description="Seus últimos produtos analisados aparecem aqui automaticamente."

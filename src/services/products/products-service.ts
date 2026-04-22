@@ -11,7 +11,7 @@ export const productsService = {
   searchByName(query: string): Promise<Product[]> {
     return productRepository.searchByName(query);
   },
-  seedProductsFromMockIfEmpty() {
-    return productRepository.seedProductsFromMockIfEmpty();
+  getOrCreateProductByBarcode(barcode: string): Promise<Product | null> {
+    return productRepository.getOrCreateProductByBarcode(barcode);
   },
 };

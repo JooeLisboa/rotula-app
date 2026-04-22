@@ -11,6 +11,7 @@ export const env = {
   firebaseMessagingSenderId: readEnv(process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID),
   firebaseAppId: readEnv(process.env.EXPO_PUBLIC_FIREBASE_APP_ID),
   sentryDsn: readEnv(process.env.EXPO_PUBLIC_SENTRY_DSN),
+  openFoodFactsBaseUrl: readEnv(process.env.EXPO_PUBLIC_OPEN_FOOD_FACTS_BASE_URL),
 } as const;
 
 export function hasFirebaseEnv() {

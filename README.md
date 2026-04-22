@@ -1,155 +1,84 @@
-# Rótula App (Firebase-first)
+# Rótula App (Expo + Firebase)
 
-Aplicativo Expo + React Native com arquitetura orientada a Firebase (Auth + Firestore + Storage), usando Expo Router e TypeScript.
+MVP mobile em React Native/Expo para escanear rótulos no Brasil.
 
-## Nova direção visual (2026)
+## O que mudou neste upgrade
 
-O frontend foi evoluído para uma experiência mais clara, escaneável e acessível, inspirada na lógica de UX de apps como Yuka (sem cópia literal):
+- Scanner real com câmera (`expo-camera`) + fallback manual.
+- Busca de produto por código de barras via Open Food Facts Brasil.
+- Cache de produto no Firestore (`products/{barcode}`) com score e classificação persistidos.
+- Fluxo de contribuição real para produto não encontrado, com upload de imagens no Storage.
+- Histórico e favoritos por usuário em subcoleções de `users/{uid}`.
 
-- **Leitura em segundos** com hierarquia visual forte.
-- **Nota do produto muito destacada** com semântica de cor.
-- **Separação clara entre alertas e qualidades**.
-- **Cards consistentes**, espaçamento respirável e navegação objetiva.
-- **Estados de vazio, loading e erro** com linguagem mais humana.
+## Arquitetura (camadas)
 
-## Princípios de UX adotados
+- **screen**: `app/*`
+- **service/usecase**: `src/services/*`
+- **repository**: `src/repositories/*`
+- **firebase/api**: `src/lib/firebase/*` e `src/api/open-food-facts.ts`
+- **domínio (score)**: `src/domain/product-score.ts`
 
-1. **Clareza primeiro**: menos ruído visual, mais prioridade para a decisão de compra.
-2. **Explorabilidade**: home com CTAs, atalhos e contexto para primeiro uso.
-3. **Semântica visual**: verde (bom), amarelo (atenção), laranja (ruim), vermelho (evite).
-4. **Acessibilidade mobile**: áreas de toque maiores, contraste melhor, labels e textos legíveis.
-5. **Consistência**: tokens de tema, tipografia, espaçamento e componentes reutilizáveis.
+## Variáveis de ambiente
 
-## Design tokens principais
+Copie `.env.example` para `.env` e preencha:
 
-Arquivo base: `constants/theme.ts`.
+- `EXPO_PUBLIC_FIREBASE_API_KEY`
+- `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN`
+- `EXPO_PUBLIC_FIREBASE_PROJECT_ID`
+- `EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET`
+- `EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+- `EXPO_PUBLIC_FIREBASE_APP_ID`
+- `EXPO_PUBLIC_SENTRY_DSN` (opcional)
+- `EXPO_PUBLIC_OPEN_FOOD_FACTS_BASE_URL` (opcional, padrão `https://br.openfoodfacts.org`)
 
-- **Cores base**
-  - `background`: `#F4F8F6`
-  - `surface`: `#FFFFFF`
-  - `tint` (primária): `#20965B`
-- **Cores semânticas**
-  - `success`: `#1F9D55`
-  - `warning`: `#F2B11B`
-  - `caution`: `#EE7E2E`
-  - `danger`: `#DB3B2E`
-- **Score**
-  - `excelente`, `bom`, `atencao`, `ruim`, `evite` em `ScoreColors`
-- **Escala de layout**
-  - `spacing`, `radius`, `typography`
-
-## Componentes de UI principais
-
-Criados/refatorados em `components/ui`:
-
-- `ScoreBadge`
-- `ProductCard`
-- `ProductHeader`
-- `ProductInsightRow`
-- `ScanCTA`
-- `SectionCard`
-- `ActionButton`
-- `EmptyState`
-- `LoadingState`
-- `ErrorState`
-- `StatusDot`
-
-## Convenções de layout
-
-- Preferir `ScreenShell` para estrutura base de telas com header e rolagem.
-- Organizar conteúdo em **blocos/seções** com `SectionCard`.
-- Exibir status de tela com componentes específicos (não string solta).
-- Evitar lógica de negócio dentro de componentes visuais reutilizáveis.
-
-## O que foi inspirado no padrão Yuka
-
-- Score com grande destaque e leitura instantânea.
-- Blocos independentes de “pontos de atenção”, “pontos positivos” e “alternativas”.
-- Linguagem visual leve e orientada a decisão rápida.
-
-## O que foi adaptado para manter originalidade
-
-- Estrutura visual própria da marca Rótula.
-- Tokens de cor e tipografia personalizados.
-- Organização de telas e componentes alinhada com arquitetura existente (Expo Router + Firebase).
-
-## Stack atual
-
-- Expo SDK 54
-- React Native 0.81
-- Expo Router 6
-- TypeScript (strict)
-- Firebase JS SDK 12
-  - Authentication
-  - Cloud Firestore
-  - Cloud Storage
-
-## Como rodar localmente
+## Rodando localmente
 
 ```bash
 npm install
 npm run start
 ```
 
-Também disponível:
+Comandos úteis:
 
 ```bash
-npm run web
-npm run android
-npm run ios
 npm run lint
 npm run typecheck
+npm run check:routes
 ```
 
-## Arquitetura (alto nível)
+## Como testar scanner
+
+1. Abra o app no dispositivo (Expo Go/dev build).
+2. Faça login.
+3. Vá em **Scanner**.
+4. Conceda permissão de câmera.
+5. Escaneie um EAN-13.
+6. Confirme redirecionamento automático para `/product/[barcode]`.
+
+## Fluxo de cache + score
+
+1. App busca `products/{barcode}` no Firestore.
+2. Se existir, usa cache.
+3. Se não existir, busca no Open Food Facts.
+4. Calcula score/classificação no domínio `product-score`.
+5. Persiste no Firestore para próximas consultas.
+
+## Fluxo de contribuição
+
+Quando um produto não existe no catálogo:
+
+1. Abrir tela `not-found-product`.
+2. Enviar foto da tabela nutricional e ingredientes (frente opcional).
+3. Upload no Storage em `product_submissions/{uid}/{submissionId}`.
+4. Documento criado em `product_submissions/{id}` com URLs e status `pending`.
+
+## Firebase (regras)
+
+Depois de ajustar `firestore.rules` e `storage.rules`, publique:
 
 ```bash
-app/
-  (auth)/
-  (onboarding)/
-  (tabs)/
-  product/[barcode].tsx
-  scanner.tsx
-components/
-  screen-shell.tsx
-  themed-text.tsx
-  ui/
-constants/
-  theme.ts
-src/
-  services/
-  repositories/
-  providers/
+npx -y firebase-tools@latest deploy --only firestore:rules
+npx -y firebase-tools@latest deploy --only storage
 ```
 
-## Auth mobile (React Native) com persistência
-
-Para evitar sessão volátil no Expo mobile (e remover warning do Firebase Auth), use persistência com AsyncStorage:
-
-```bash
-npm install @react-native-async-storage/async-storage
-```
-
-A inicialização já está preparada em `src/lib/firebase/client.ts` com `initializeAuth` + persistência local baseada em AsyncStorage no React Native e `getAuth` na Web.
-
-## Troubleshooting de autenticação mobile
-
-### 1) Warning de persistência do Firebase Auth
-- Sintoma: warning informando que Auth no React Native está sem camada de persistência.
-- Correção: instalar `@react-native-async-storage/async-storage` e reiniciar o bundler com cache limpo.
-
-```bash
-npm run start -- --clear
-```
-
-### 2) `ERROR null` no log
-- Causa: erro desconhecido/`null` sendo serializado sem normalização.
-- Correção: monitoramento agora serializa `null`, `undefined`, objetos e `Error` corretamente, incluindo `code`, `message` e `stack`.
-
-### 3) Login/cadastro falhando sem mensagem clara
-- Causa: erro do Firebase era capturado sem detalhamento padronizado para UI/telemetria.
-- Correção: erros agora são normalizados no repositório de auth, preservando código original (`error.code`) e mensagem original do Firebase para diagnóstico.
-
-### 4) Estado inconsistente após falha no cadastro
-- Causa: possível criação parcial de conta seguida de falha em escrita no Firestore.
-- Correção: fluxo de register agora faz `signOut` defensivo no `catch` para manter estado local consistente.
+> Importante: o app não faz diagnóstico médico. A classificação é uma heurística de apoio para leitura de rótulos.
