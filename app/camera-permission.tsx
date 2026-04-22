@@ -5,15 +5,12 @@ import { ThemedText } from '@/components/themed-text';
 
 export default function CameraPermissionScreen() {
   return (
-    <ScreenShell title="Permissão de câmera" subtitle="A câmera exige módulo nativo e permissões no app config.">
+    <ScreenShell title="Permissão de câmera" subtitle="A leitura automática precisa de acesso à câmera.">
       <ThemedText>
-        Nesta base, o scanner está em fallback manual para manter compatibilidade com Expo Go sem dependências nativas extras.
-      </ThemedText>
-      <ThemedText>
-        Quando o módulo de câmera estiver instalado, esta tela pode solicitar permissões e redirecionar para leitura em tempo real.
+        Se você negou a permissão, abra as configurações do sistema e habilite a câmera para continuar escaneando.
       </ThemedText>
       <Link href="/scanner">
-        <ThemedText>Voltar ao scanner</ThemedText>
+        <ThemedText type="link">Voltar ao scanner</ThemedText>
       </Link>
     </ScreenShell>
   );

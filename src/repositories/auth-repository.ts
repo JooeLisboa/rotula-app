@@ -10,7 +10,7 @@ import {
 } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 
-import { getFirebaseAuth, getFirebaseDb } from '@/src/lib/firebase/client';
+import { getFirebaseAuth, getFirebaseDb, isFirebaseConfigured } from '@/src/lib/firebase/client';
 import type { ForgotPasswordInput, LoginInput, RegisterInput, Session } from '@/src/types/auth';
 
 type AuthError = Error & { code?: string; originalMessage?: string };
@@ -45,6 +45,12 @@ function mapFirebaseAuthError(error: unknown) {
   }
 }
 
+
+function assertFirebaseReady() {
+  if (!isFirebaseConfigured()) {
+    throw createAuthError('Firebase não configurado para autenticação neste ambiente.', new Error('firebase-not-configured'));
+  }
+}
 async function toSession(user: User): Promise<Session> {
   const accessToken = await user.getIdToken();
 
@@ -61,6 +67,11 @@ async function toSession(user: User): Promise<Session> {
 
 export const authRepository = {
   onSessionChanged(handler: (session: Session | null) => void) {
+    if (!isFirebaseConfigured()) {
+      handler(null);
+      return () => undefined;
+    }
+
     return onAuthStateChanged(getFirebaseAuth(), async (user) => {
       if (!user) {
         handler(null);
@@ -72,6 +83,7 @@ export const authRepository = {
   },
 
   async login(input: LoginInput): Promise<Session> {
+    assertFirebaseReady();
     try {
       const credential = await signInWithEmailAndPassword(getFirebaseAuth(), input.email, input.password);
       return toSession(credential.user);
@@ -81,6 +93,7 @@ export const authRepository = {
   },
 
   async register(input: RegisterInput): Promise<Session> {
+    assertFirebaseReady();
     try {
       const auth = getFirebaseAuth();
       const db = getFirebaseDb();
@@ -131,10 +144,12 @@ export const authRepository = {
   },
 
   async logout() {
+    assertFirebaseReady();
     await signOut(getFirebaseAuth());
   },
 
   async forgotPassword(input: ForgotPasswordInput) {
+    assertFirebaseReady();
     try {
       await sendPasswordResetEmail(getFirebaseAuth(), input.email);
     } catch (error) {

@@ -5,18 +5,22 @@ service firebase.storage {
       return request.auth != null;
     }
 
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
     function isAdmin() {
       return isSignedIn() && request.auth.token.admin == true;
     }
 
     match /user_avatars/{uid}/{allPaths=**} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.uid == uid;
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if isOwner(uid);
     }
 
-    match /product_images/{allPaths=**} {
-      allow read: if true;
-      allow write: if isAdmin();
+    match /product_submissions/{uid}/{allPaths=**} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if isOwner(uid);
     }
 
     match /assets/{allPaths=**} {

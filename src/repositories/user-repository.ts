@@ -1,30 +1,21 @@
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDoc,
-  getDocs,
-  query,
-  serverTimestamp,
-  setDoc,
-  where,
-} from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore';
 
 import { getFirebaseAuth, getFirebaseDb } from '@/src/lib/firebase/client';
 import { productRepository } from '@/src/repositories/product-repository';
 import type { FavoritesState, HistoryEntry, UserProfile } from '@/src/types/user';
 
-function getUid() {
+function currentUid() {
   const uid = getFirebaseAuth().currentUser?.uid;
   if (!uid) {
     throw new Error('Usuário não autenticado.');
   }
+
   return uid;
 }
 
 export const userRepository = {
   async getProfile(): Promise<UserProfile> {
-    const uid = getUid();
+    const uid = currentUid();
     const profileSnapshot = await getDoc(doc(getFirebaseDb(), 'user_profiles', uid));
 
     if (!profileSnapshot.exists()) {
@@ -46,54 +37,33 @@ export const userRepository = {
     };
   },
 
-  async getHistory(): Promise<HistoryEntry[]> {
-    const uid = getUid();
-    const snapshot = await getDocs(query(collection(getFirebaseDb(), 'scan_history'), where('uid', '==', uid)));
-
-    return snapshot.docs
-      .map((entry) => ({
-        id: entry.id,
-        uid,
-        barcode: String(entry.data().barcode ?? ''),
-        productId: String(entry.data().productId ?? ''),
-        productName: String(entry.data().productName ?? ''),
-        scannedAt: entry.data().scannedAt?.toDate?.()?.toISOString?.() ?? new Date().toISOString(),
-      }))
-      .sort((a, b) => b.scannedAt.localeCompare(a.scannedAt));
-  },
-
-  async addScanHistory(input: { barcode: string; productId: string; productName: string }) {
-    const uid = getUid();
-    const entryRef = doc(collection(getFirebaseDb(), 'scan_history'));
-    await setDoc(entryRef, {
+  async addScanToHistory(uid: string, barcode: string, productName: string) {
+    const historyRef = doc(collection(getFirebaseDb(), 'users', uid, 'history'));
+    await setDoc(historyRef, {
       uid,
-      barcode: input.barcode,
-      productId: input.productId,
-      productName: input.productName,
+      barcode,
+      productName,
       scannedAt: serverTimestamp(),
     });
   },
 
-  async getFavorites(): Promise<FavoritesState> {
-    const uid = getUid();
-    const snapshot = await getDocs(query(collection(getFirebaseDb(), 'favorites'), where('uid', '==', uid)));
-
-    const products = await Promise.all(
-      snapshot.docs.map(async (item) => {
-        const barcode = String(item.data().barcode ?? '');
-        return productRepository.findByBarcode(barcode);
-      })
+  async listHistory(uid: string): Promise<HistoryEntry[]> {
+    const snapshot = await getDocs(
+      query(collection(getFirebaseDb(), 'users', uid, 'history'), orderBy('scannedAt', 'desc'), limit(50))
     );
 
-    return {
-      items: products.filter((item): item is NonNullable<typeof item> => Boolean(item)),
-    };
+    return snapshot.docs.map((entry) => ({
+      id: entry.id,
+      uid,
+      barcode: String(entry.data().barcode ?? ''),
+      productId: String(entry.data().barcode ?? ''),
+      productName: String(entry.data().productName ?? 'Produto'),
+      scannedAt: entry.data().scannedAt?.toDate?.()?.toISOString?.() ?? new Date().toISOString(),
+    }));
   },
 
-  async toggleFavorite(input: { productId: string; barcode: string }): Promise<boolean> {
-    const uid = getUid();
-    const favoriteId = `${uid}_${input.productId}`;
-    const favoriteRef = doc(getFirebaseDb(), 'favorites', favoriteId);
+  async toggleFavorite(uid: string, barcode: string) {
+    const favoriteRef = doc(getFirebaseDb(), 'users', uid, 'favorites', barcode);
     const snapshot = await getDoc(favoriteRef);
 
     if (snapshot.exists()) {
@@ -103,10 +73,51 @@ export const userRepository = {
 
     await setDoc(favoriteRef, {
       uid,
-      productId: input.productId,
-      barcode: input.barcode,
+      barcode,
       createdAt: serverTimestamp(),
     });
+
     return true;
+  },
+
+  async isFavorite(uid: string, barcode: string) {
+    const favoriteRef = doc(getFirebaseDb(), 'users', uid, 'favorites', barcode);
+    const snapshot = await getDoc(favoriteRef);
+    return snapshot.exists();
+  },
+
+  async listFavorites(uid: string): Promise<FavoritesState> {
+    const snapshot = await getDocs(query(collection(getFirebaseDb(), 'users', uid, 'favorites'), limit(100)));
+
+    const products = await Promise.all(
+      snapshot.docs.map(async (item) => {
+        const barcode = String(item.data().barcode ?? '');
+        if (!barcode) {
+          return null;
+        }
+
+        return productRepository.findByBarcode(barcode);
+      })
+    );
+
+    return {
+      items: products.filter((item): item is NonNullable<typeof item> => Boolean(item)),
+    };
+  },
+
+  async getHistory(): Promise<HistoryEntry[]> {
+    return this.listHistory(currentUid());
+  },
+
+  async addScanHistory(input: { barcode: string; productId: string; productName: string }) {
+    return this.addScanToHistory(currentUid(), input.barcode, input.productName);
+  },
+
+  async getFavorites(): Promise<FavoritesState> {
+    return this.listFavorites(currentUid());
+  },
+
+  async toggleFavoriteForCurrentUser(barcode: string): Promise<boolean> {
+    return this.toggleFavorite(currentUid(), barcode);
   },
 };
