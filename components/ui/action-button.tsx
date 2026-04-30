@@ -8,23 +8,19 @@ interface ActionButtonProps {
   onPress: () => void;
   disabled?: boolean;
   variant?: 'primary' | 'secondary' | 'ghost';
+  accessibilityHint?: string;
 }
 
-export function ActionButton({ label, onPress, disabled, variant = 'primary' }: ActionButtonProps) {
+export function ActionButton({ label, onPress, disabled, variant = 'primary', accessibilityHint }: ActionButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: Boolean(disabled) }}
       onPress={onPress}
       disabled={disabled}
-      style={({ pressed }) => [
-        styles.base,
-        variant === 'primary' && styles.primary,
-        variant === 'secondary' && styles.secondary,
-        variant === 'ghost' && styles.ghost,
-        disabled && styles.disabled,
-        pressed && !disabled && styles.pressed,
-      ]}
+      style={({ pressed }) => [styles.base, variant === 'primary' && styles.primary, variant === 'secondary' && styles.secondary, variant === 'ghost' && styles.ghost, disabled && styles.disabled, pressed && !disabled && styles.pressed]}
     >
       <ThemedText style={[styles.label, variant !== 'primary' && styles.altLabel]}>{label}</ThemedText>
     </Pressable>
@@ -32,38 +28,12 @@ export function ActionButton({ label, onPress, disabled, variant = 'primary' }: 
 }
 
 const styles = StyleSheet.create({
-  base: {
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    borderWidth: 1,
-    minHeight: 48,
-    justifyContent: 'center',
-  },
-  primary: {
-    backgroundColor: Palette.primary,
-    borderColor: Palette.primary,
-  },
-  secondary: {
-    backgroundColor: '#E8F5EE',
-    borderColor: '#CFE9D8',
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-    borderColor: '#CBD5E1',
-  },
-  disabled: {
-    opacity: 0.6,
-  },
-  pressed: {
-    transform: [{ scale: 0.99 }],
-  },
-  label: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  altLabel: {
-    color: '#134E2E',
-  },
+  base: { borderRadius: radius.md, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, alignItems: 'center', borderWidth: 1, minHeight: 52, justifyContent: 'center' },
+  primary: { backgroundColor: Palette.primary, borderColor: Palette.primary },
+  secondary: { backgroundColor: Palette.surfaceAlt, borderColor: Palette.border },
+  ghost: { backgroundColor: 'transparent', borderColor: Palette.border },
+  disabled: { opacity: 0.6 },
+  pressed: { transform: [{ scale: 0.99 }] },
+  label: { color: '#FFFFFF', fontWeight: '700' },
+  altLabel: { color: Palette.text },
 });
