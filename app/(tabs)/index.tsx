@@ -22,7 +22,7 @@ export default function HomeScreen() {
     <CommercialCTA title={t('cta.premiumTitle')} description={t('cta.premiumDescription')} buttonLabel={t('cta.premiumButton')} onPress={() => { trackEvent(EventName.CtaClicked, { source: 'home' }); router.push('/scanner'); }} />
     <SectionCard title={t('home.manualSearch')} subtitle={t('search.subtitle')}><Link href="/(tabs)/search" asChild><ThemedText type="link">{t('common.understandProduct')}</ThemedText></Link></SectionCard>
     <SectionCard title={t('home.featured')} subtitle={t('home.methodology')}>{isLoading ? <LoadingState label={t('common.loading')} /> : featured ? <ProductCard product={featured} /> : <EmptyState title={t('home.featured')} description={t('search.empty')} />}</SectionCard>
-    <SectionCard title={t('home.quickAccess')} subtitle={t('home.socialProof')}><View style={styles.quickLinks}><Link href="/(tabs)/favorites" asChild><ThemedText type="link">Favoritos</ThemedText></Link><Link href="/(tabs)/history" asChild><ThemedText type="link">Histórico</ThemedText></Link><Link href="/faq" asChild><ThemedText type="link">FAQ</ThemedText></Link></View></SectionCard>
+    <SectionCard title={t('home.quickAccess')} subtitle={t('home.socialProof')}><View style={styles.quickLinks}><Link href="/(tabs)/favorites" asChild><ThemedText type="link">{t('home.favorites')}</ThemedText></Link><Link href="/(tabs)/history" asChild><ThemedText type="link">{t('home.history')}</ThemedText></Link><Link href="/faq" asChild><ThemedText type="link">{t('home.faq')}</ThemedText></Link></View></SectionCard>
   </ScreenShell>;
 }
 const styles = StyleSheet.create({ quickLinks: { gap: spacing.xs } });

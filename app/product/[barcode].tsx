@@ -13,7 +13,8 @@ import { ScoreBadge } from '@/components/ui/score-badge';
 import { SectionCard } from '@/components/ui/section-card';
 import { Palette, spacing } from '@/constants/theme';
 import { useAuth } from '@/src/hooks/use-auth';
-import { captureError, trackEvent } from '@/src/lib/observability/monitoring';
+import { EventName, trackEvent } from '@/src/analytics/events';
+import { captureError } from '@/src/lib/observability/monitoring';
 import { productsService } from '@/src/services/products/products-service';
 import { userService } from '@/src/services/user/user-service';
 import type { Product } from '@/src/types/product';
@@ -46,14 +47,14 @@ export default function ProductResultScreen() {
         setIsLoading(false);
 
         if (found && uid) {
-          trackEvent('product_loaded', { productId: found.id, barcode });
+          trackEvent(EventName.ProductLoaded, { source: 'barcode' });
           await userService.addScanToHistory(uid, barcode, found.name);
           const favorite = await userService.isFavorite(uid, found.barcode);
           if (mounted) {
             setIsFavorite(favorite);
           }
         } else {
-          trackEvent('product_not_found', { barcode });
+          trackEvent(EventName.ProductNotFound);
         }
       } catch (error) {
         if (mounted) {
@@ -79,7 +80,7 @@ export default function ProductResultScreen() {
     try {
       const favoriteState = await userService.toggleFavorite(uid, product.barcode);
       setIsFavorite(favoriteState);
-      trackEvent(favoriteState ? 'favorite_added' : 'favorite_removed', { productId: product.id });
+      trackEvent(favoriteState ? EventName.FavoriteAdded : EventName.FavoriteRemoved);
     } catch (error) {
       captureError(error, { scope: 'screen.product.favorite', productId: product.id });
     } finally {

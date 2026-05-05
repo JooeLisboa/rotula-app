@@ -1,19 +1,13 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
-
-import { ScreenShell } from '@/components/screen-shell';
-import { ActionButton } from '@/components/ui/action-button';
-import { ErrorState } from '@/components/ui/error-state';
-import { Palette, radius, spacing } from '@/constants/theme';
-import { EventName, trackEvent } from '@/src/analytics/events';
-import { useLanguage } from '@/src/hooks/use-language';
-import { useAuth } from '@/src/hooks/use-auth';
-
-export default function RegisterScreen() {
-  const router = useRouter(); const { t } = useLanguage(); const { register, isAuthenticating } = useAuth();
-  const [name, setName] = useState(''); const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [error, setError] = useState<string | null>(null);
-  async function handleRegister() { setError(null); trackEvent(EventName.RegisterStarted); try { await register({ name: name.trim(), email: email.trim(), password }); router.replace('/(tabs)'); } catch (e) { setError(e instanceof Error ? e.message : 'Erro'); } }
-  return <ScreenShell title={t('auth.registerTitle')} subtitle={t('auth.registerSubtitle')}><View style={styles.form}><TextInput placeholder={t('auth.name')} style={styles.input} value={name} onChangeText={setName} /><TextInput placeholder={t('auth.email')} style={styles.input} value={email} onChangeText={setEmail} autoCapitalize="none" /><TextInput placeholder={t('auth.password')} style={styles.input} value={password} onChangeText={setPassword} secureTextEntry /></View>{error ? <ErrorState title="Erro" description={error} /> : null}<ActionButton label={isAuthenticating ? t('auth.registering') : t('auth.register')} onPress={handleRegister} disabled={isAuthenticating} /></ScreenShell>;
-}
-const styles = StyleSheet.create({ form: { gap: spacing.sm }, input: { borderWidth: 1, borderColor: Palette.border, borderRadius: radius.md, padding: spacing.md, backgroundColor: Palette.surface, minHeight: 48, color: Palette.text } });
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { StyleSheet, TextInput, View } from "react-native";
+import { ScreenShell } from "@/components/screen-shell";
+import { ActionButton } from "@/components/ui/action-button";
+import { ErrorState } from "@/components/ui/error-state";
+import { Palette, radius, spacing } from "@/constants/theme";
+import { EventName, trackEvent } from "@/src/analytics/events";
+import { useAuth } from "@/src/hooks/use-auth";
+import { useLanguage } from "@/src/hooks/use-language";
+const EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export default function RegisterScreen(){const router=useRouter();const {t}=useLanguage();const {register,isAuthenticating}=useAuth();const [name,setName]=useState('');const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [error,setError]=useState<string|null>(null);const handleRegister=async()=>{if(!name.trim())return setError(t('auth.emptyName'));if(!email.trim())return setError(t('auth.emptyEmail'));if(!EMAIL_RE.test(email.trim()))return setError(t('auth.invalidEmail'));if(!password)return setError(t('auth.emptyPassword'));if(password.length<6)return setError(t('auth.weakPassword'));setError(null);trackEvent(EventName.RegisterStarted);try{await register({name:name.trim(),email:email.trim().toLowerCase(),password});trackEvent(EventName.RegisterSuccess);router.replace('/(tabs)');}catch{trackEvent(EventName.RegisterFailure,{reason:'unknown_error'});setError(t('common.error'));}};return <ScreenShell title={t('auth.registerTitle')} subtitle={t('auth.registerSubtitle')}><View style={styles.form}><TextInput placeholder={t('auth.name')} style={styles.input} value={name} onChangeText={setName}/><TextInput placeholder={t('auth.email')} style={styles.input} value={email} onChangeText={setEmail} autoCapitalize="none"/><TextInput placeholder={t('auth.password')} style={styles.input} value={password} onChangeText={setPassword} secureTextEntry/></View>{error?<ErrorState title={t('common.error')} description={error}/>:null}<ActionButton label={isAuthenticating?t('auth.registering'):t('auth.register')} onPress={handleRegister} disabled={isAuthenticating}/></ScreenShell>;}
+const styles=StyleSheet.create({form:{gap:spacing.sm},input:{borderWidth:1,borderColor:Palette.border,borderRadius:radius.md,padding:spacing.md,backgroundColor:Palette.surface,minHeight:48,color:Palette.text}});
