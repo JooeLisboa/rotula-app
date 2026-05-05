@@ -78,10 +78,6 @@ export function initMonitoring() {
   });
 }
 
-export function trackEvent(event: string, payload?: EventPayload) {
-  logger.info('event', event, payload);
-}
-
 export function captureError(error: unknown, metadata?: EventPayload) {
   const serialized = serializeError(error);
 

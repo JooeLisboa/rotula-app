@@ -1,5 +1,5 @@
 import { useAuth } from '@/src/hooks/use-auth';
-import { trackEvent } from '@/src/lib/observability/monitoring';
+import { EventName, trackEvent } from '@/src/analytics/events';
 import { usePathname, useRouter, useSegments } from 'expo-router';
 import { useEffect, useRef } from 'react';
 
@@ -22,7 +22,7 @@ export function AuthGate() {
 
     if (!isAuthenticated && !inPublicArea) {
       if (previousPathRef.current !== '/(onboarding)') {
-        trackEvent('auth_guard_redirect', { from: pathname, to: '/(onboarding)' });
+        trackEvent(EventName.AuthGuardRedirect, { area: 'onboarding' });
       }
       previousPathRef.current = '/(onboarding)';
       router.replace('/(onboarding)');
@@ -31,7 +31,7 @@ export function AuthGate() {
 
     if (isAuthenticated && inPublicArea) {
       if (previousPathRef.current !== '/(tabs)') {
-        trackEvent('auth_guard_redirect', { from: pathname, to: '/(tabs)' });
+        trackEvent(EventName.AuthGuardRedirect, { area: 'tabs' });
       }
       previousPathRef.current = '/(tabs)';
       router.replace('/(tabs)');

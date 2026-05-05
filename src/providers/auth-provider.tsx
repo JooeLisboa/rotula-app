@@ -1,4 +1,5 @@
-import { captureError, trackEvent } from '@/src/lib/observability/monitoring';
+import { EventName, trackEvent } from '@/src/analytics/events';
+import { captureError } from '@/src/lib/observability/monitoring';
 import { authService } from '@/src/services/auth/auth-service';
 import type { LoginInput, RegisterInput, Session } from '@/src/types/auth';
 import { createContext, useCallback, useEffect, useMemo, useState, type PropsWithChildren } from 'react';
@@ -33,10 +34,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setIsAuthenticating(true);
 
     try {
-      const nextSession = await authService.login(payload);
-      trackEvent('auth_login_success', { userId: nextSession.user.id });
+      await authService.login(payload);
+      trackEvent(EventName.LoginSuccess);
     } catch (error) {
-      trackEvent('auth_login_failure', { email: payload.email });
+      trackEvent(EventName.LoginFailure, { reason: 'unknown_error' });
       captureError(error, { scope: 'auth.login' });
       throw error;
     } finally {
@@ -48,10 +49,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setIsAuthenticating(true);
 
     try {
-      const nextSession = await authService.register(payload);
-      trackEvent('auth_register_success', { userId: nextSession.user.id });
+      await authService.register(payload);
+      trackEvent(EventName.RegisterSuccess);
     } catch (error) {
-      trackEvent('auth_register_failure', { email: payload.email });
+      trackEvent(EventName.RegisterFailure, { reason: 'unknown_error' });
       captureError(error, { scope: 'auth.register' });
       throw error;
     } finally {
@@ -62,7 +63,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const logout = useCallback(async () => {
     try {
       await authService.logout();
-      trackEvent('auth_logout', {});
+      
     } catch (error) {
       captureError(error, { scope: 'auth.logout' });
       throw error;
