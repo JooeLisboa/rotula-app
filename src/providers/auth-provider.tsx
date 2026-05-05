@@ -34,7 +34,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setIsAuthenticating(true);
 
     try {
-      const nextSession = await authService.login(payload);
+      await authService.login(payload);
       trackEvent(EventName.LoginSuccess);
     } catch (error) {
       trackEvent(EventName.LoginFailure, { reason: 'unknown_error' });
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setIsAuthenticating(true);
 
     try {
-      const nextSession = await authService.register(payload);
+      await authService.register(payload);
       trackEvent(EventName.RegisterSuccess);
     } catch (error) {
       trackEvent(EventName.RegisterFailure, { reason: 'unknown_error' });
